@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contrôle Incendie Multi-Sites</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  
+  <style>
+    :root { --primary: #d9534f; --success: #28a745; --bg: #f8f9fa; --card: #ffffff; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: #333; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+    .card { background: var(--card); border-radius: 12px; padding: 20px; width: 100%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; color: white; cursor: pointer; margin-top: 10px; }
+    .btn-success { background: var(--success); }
+    .btn-danger { background: var(--primary); }
+    .btn-secondary { background: #6c757d; }
+    .btn-primary { background: #0d6efd; }
+    .hidden { display: none; }
+    input, select { width: 100%; padding: 10px; margin: 6px 0 12px 0; border: 1px solid #ccc; border-radius: 6px; }
+    .checkbox-group { display: flex; flex-direction: column; gap: 8px; margin: 15px 0; }
+    .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; background: #f1f3f5; padding: 8px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+
+  <!-- ÉTAPE 0 : Authentification (Connexion / Inscription) -->
+  <div id="step-auth" class="card">
+    <h1 style="text-align: center;">🔥 Contrôle Incendie</h1>
+    <h3 id="auth-title" style="text-align: center;">Connexion</h3>
+    
+    <label>Email :</label>
+    <input type="email" id="auth-email" placeholder="votre@email.com">
+    
+    <label>Mot de passe :</label>
+    <input type="password" id="auth-password" placeholder="******">
+
+    <button class="btn btn-primary" id="btn-login" onclick="login()">Se connecter</button>
+    <button class="btn btn-success hidden" id="btn-signup" onclick="signup()">Créer mon compte gratuit</button>
+    
+    <p style="text-align: center; margin-top: 15px; font-size: 13px; color: #0d6efd; cursor: pointer;" onclick="toggleAuthMode()" id="auth-toggle-text">
+      Pas encore de compte ? Créer un compte gratuit
+    </p>
+  </div>
+
+  <!-- ÉTAPE 1 : Choix du Site & Scanner -->
+  <div id="step-scan" class="card hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span id="user-email-display" style="font-size: 12px; color: #666;"></span>
+      <button onclick="logout()" style="padding: 4px 8px; font-size: 12px;">Déconnexion</button>
+    </div>
+
+    <h2>Sélection du Site</h2>
+    <select id="site-select" onchange="loadSiteData()">
+      <option value="">-- Choisir un site --</option>
+    </select>
+    
+    <button class="btn btn-secondary" onclick="showNewSiteForm()">➕ Ajouter un nouveau site</button>
+
+    <hr style="margin: 20px 0;">
+
+    <div id="scanner-section" class="hidden">
+      <h3>Scanner QR Code</h3>
+      <div id="reader"></div>
+      
+      <div style="margin-top: 15px;">
+        <label>Importer base extincteurs (.CSV) pour ce site :</label>
+        <input type="file" id="csv-file" accept=".csv" onchange="importCSVToFirestore(event)">
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 1.1 : Formulaire Nouveau Site -->
+  <div id="step-new-site" class="card hidden">
+    <h2>Nouveau Site</h2>
+    <label>Nom du site :</label>
+    <input type="text" id="new-site-name" placeholder="ex: Usine Lyon, Entrepôt B">
+    <button class="btn btn-success" onclick="createSite()">Créer le site</button>
+    <button class="btn btn-secondary" onclick="showStep('step-scan')">Annuler</button>
+  </div>
+
+  <!-- ÉTAPE 2 : Controle Conforme / Défaut -->
+  <div id="step-choice" class="card hidden">
+    <h2>Extincteur Scanné</h2>
+    <div style="background: #e9ecef; padding: 10px; border-radius: 6px; margin-bottom: 15px;" id="extincteur-details"></div>
+    
+    <button class="btn btn-success" onclick="saveControl('CONFORME')">✅ CONFORME</button>
+    <button class="btn btn-danger" onclick="showDefects()">⚠️ DÉFAUT CONSTATÉ</button>
+    <button class="btn btn-secondary" onclick="resetApp()">↩️️ Rescanner</button>
+  </div>
+
+  <!-- ÉTAPE 3 : Défauts -->
+  <div id="step-defects" class="card hidden">
+    <h2>Liste des Défauts</h2>
+    <form id="defects-form">
+      <div class="checkbox-group">
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Plomb/Scellé manquant"> 🔴 Plombage / Scellé manquant</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Goupille manquante"> 🔴 Goupille manquante</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Manomètre hors zone"> 🟡 Manomètre hors zone</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Flexible abîmé"> 🟡 Flexible / Lance abîmé</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Corrosion"> 🟡 Corrosion / Rouille</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Accès obstrué"> ⚪ Accès / Signalisation obstrué</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Étiquette illisible"> ⚪ Étiquette illisible</label>
+      </div>
+      <button type="button" class="btn btn-danger" onclick="saveControl('NON CONFORME')">💾 Enregistrer Défaut</button>
+      <button type="button" class="btn btn-secondary" onclick="resetApp()">Annuler</button>
+    </form>
+  </div>
+
+  <!-- SDK Firebase Modular (JS ES Modules) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } 
+      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where } 
+      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // ⚠️ Remplacez ces valeurs par votre propre configuration Firebase !
+    const firebaseConfig = {
+      apiKey: "VOTRE_API_KEY",
+      authDomain: "votre-projet.firebaseapp.com",
+      projectId: "votre-projet",
+      storageBucket: "votre-projet.appspot.com",
+      messagingSenderId: "XXXXX",
+      appId: "XXXXX"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let currentSiteId = null;
+    let html5QrcodeScanner = null;
+    let currentExtincteur = null;
+    let isSignUpMode = false;
+
+    // --- AUTHENTIFICATION ---
+    window.toggleAuthMode = () => {
+      isSignUpMode = !isSignUpMode;
+      document.getElementById('auth-title').innerText = isSignUpMode ? "Créer un compte gratuit" : "Connexion";
+      document.getElementById('btn-login').classList.toggle('hidden', isSignUpMode);
+      document.getElementById('btn-signup').classList.toggle('hidden', !isSignUpMode);
+      document.getElementById('auth-toggle-text').innerText = isSignUpMode ? "Déjà un compte ? Connexion" : "Pas encore de compte ? Créer un compte gratuit";
+    };
+
+    window.signup = () => {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-password').value;
+      createUserWithEmailAndPassword(auth, email, pass)
+        .then(() => alert("Compte créé avec succès !"))
+        .catch(err => alert("Erreur : " + err.message));
+    };
+
+    window.login = () => {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-password').value;
+      signInWithEmailAndPassword(auth, email, pass)
+        .catch(err => alert("Erreur : " + err.message));
+    };
+
+    window.logout = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      if (user) {
+        document.getElementById('user-email-display').innerText = user.email;
+        showStep('step-scan');
+        loadUserSites();
+      } else {
+        showStep('step-auth');
+      }
+    });
+
+    // --- GESTION MULTI-SITES ---
+    async function loadUserSites() {
+      const select = document.getElementById('site-select');
+      select.innerHTML = '<option value="">-- Choisir un site --</option>';
+      
+      const q = query(collection(db, "sites"), where("userId", "==", currentUser.uid));
+      const querySnapshot = await getDocs(q);
+      
+      querySnapshot.forEach((doc) => {
+        select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
+      });
+    }
+
+    window.showNewSiteForm = () => showStep('step-new-site');
+
+    window.createSite = async () => {
+      const name = document.getElementById('new-site-name').value.trim();
+      if (!name) return alert("Veuillez saisir un nom de site.");
+
+      await addDoc(collection(db, "sites"), {
+        name: name,
+        userId: currentUser.uid,
+        createdAt: new Date()
+      });
+
+      alert("Site créé !");
+      showStep('step-scan');
+      loadUserSites();
+    };
+
+    window.loadSiteData = () => {
+      currentSiteId = document.getElementById('site-select').value;
+      const scannerSec = document.getElementById('scanner-section');
+      if (currentSiteId) {
+        scannerSec.classList.remove('hidden');
+        initScanner();
+      } else {
+        scannerSec.classList.add('hidden');
+      }
+    };
+
+    // --- SCANNER & CONTRÔLE ---
+    function initScanner() {
+      if (html5QrcodeScanner) html5QrcodeScanner.clear();
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+      html5QrcodeScanner.render(onScanSuccess);
+    }
+
+    async function onScanSuccess(decodedText) {
+      html5QrcodeScanner.clear();
+
+      // Recherche dans la BDD Firestore du site
+      const q = query(collection(db, "extincteurs"), 
+        where("siteId", "==", currentSiteId), 
+        where("qrcode", "==", decodedText));
+      
+      const snap = await getDocs(q);
+
+      if (!snap.empty) {
+        currentExtincteur = snap.docs[0].data();
+        document.getElementById('extincteur-details').innerHTML = `
+          <p><b>QR:</b> ${currentExtincteur.qrcode}</p>
+          <p><b>Emplacement:</b> ${currentExtincteur.emplacement || 'N/C'}</p>
+          <p><b>Type:</b> ${currentExtincteur.type || 'N/C'}</p>
+        `;
+      } else {
+        currentExtincteur = { qrcode: decodedText, emplacement: 'Inconnu', type: 'Nouveau' };
+        document.getElementById('extincteur-details').innerHTML = `<p><b>QR scanné:</b> ${decodedText} (Non enregistré sur ce site)</p>`;
+      }
+      showStep('step-choice');
+    }
+
+    window.saveControl = async (statut) => {
+      let details = [];
+      if (statut === 'NON CONFORME') {
+        document.querySelectorAll('input[name="defect"]:checked').forEach(cb => details.push(cb.value));
+      }
+
+      await addDoc(collection(db, "controles"), {
+        siteId: currentSiteId,
+        userId: currentUser.uid,
+        qrcode: currentExtincteur.qrcode,
+        statut: statut,
+        details: details.join(' | ') || 'RAS',
+        date: new Date()
+      });
+
+      alert("Contrôle enregistré !");
+      resetApp();
+    };
+
+    // --- IMPORT CSV VERS CLOUD ---
+    window.importCSVToFirestore = (event) => {
+      const file = event.target.files[0];
+      if (!file || !currentSiteId) return alert("Sélectionnez un site d'abord.");
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const lines = e.target.result.split('\n');
+        const sep = e.target.result.includes(';') ? ';' : ',';
+
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const cols = lines[i].split(sep).map(c => c.replace(/"/g, '').trim());
+          if (cols[0]) {
+            await addDoc(collection(db, "extincteurs"), {
+              siteId: currentSiteId,
+              qrcode: cols[0],
+              emplacement: cols[1] || '',
+              type: cols[2] || ''
+            });
+          }
+        }
+        alert("Importation terminée dans la base du site !");
+      };
+      reader.readAsText(file);
+    };
+
+    window.showDefects = () => showStep('step-defects');
+    window.resetApp = () => { showStep('step-scan'); initScanner(); };
+    function showStep(id) {
+      document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

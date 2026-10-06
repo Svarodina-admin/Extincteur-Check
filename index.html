@@ -4,10 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contrôle Incendie Multi-Sites</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
   
+  <!-- Librairies externes -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <style>
-    :root { --primary: #d9534f; --success: #28a745; --bg: #f8f9fa; --card: #ffffff; }
+    :root { --primary: #d9534f; --success: #28a745; --bg: #f8f9fa; --card: #ffffff; --info: #17a2b8; }
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: var(--bg); color: #333; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
     .card { background: var(--card); border-radius: 12px; padding: 20px; width: 100%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
@@ -16,15 +20,19 @@
     .btn-danger { background: var(--primary); }
     .btn-secondary { background: #6c757d; }
     .btn-primary { background: #0d6efd; }
+    .btn-info { background: var(--info); }
     .hidden { display: none; }
     input, select { width: 100%; padding: 10px; margin: 6px 0 12px 0; border: 1px solid #ccc; border-radius: 6px; }
     .checkbox-group { display: flex; flex-direction: column; gap: 8px; margin: 15px 0; }
     .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; background: #f1f3f5; padding: 8px; border-radius: 6px; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+    .stat-box { background: #e9ecef; padding: 10px; border-radius: 8px; text-align: center; }
+    .stat-number { font-size: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <!-- ÉTAPE 0 : Authentification (Connexion / Inscription) -->
+  <!-- ÉTAPE 0 : Authentification -->
   <div id="step-auth" class="card">
     <h1 style="text-align: center;">🔥 Contrôle Incendie</h1>
     <h3 id="auth-title" style="text-align: center;">Connexion</h3>
@@ -57,16 +65,33 @@
     
     <button class="btn btn-secondary" onclick="showNewSiteForm()">➕ Ajouter un nouveau site</button>
 
-    <hr style="margin: 20px 0;">
-
-    <div id="scanner-section" class="hidden">
-      <h3>Scanner QR Code</h3>
-      <div id="reader"></div>
+    <div id="site-dashboard" class="hidden">
+      <hr style="margin: 20px 0;">
       
-      <div style="margin-top: 15px;">
-        <label>Importer base extincteurs (.CSV) pour ce site :</label>
-        <input type="file" id="csv-file" accept=".csv" onchange="importCSVToFirestore(event)">
+      <!-- Statistiques du site -->
+      <h3>Tableau de bord du Site</h3>
+      <div class="stats-grid">
+        <div class="stat-box"><div>Total Contrôles</div><div id="stat-total" class="stat-number">0</div></div>
+        <div class="stat-box" style="color: var(--success);"><div>Conformes</div><div id="stat-conforme" class="stat-number">0</div></div>
+        <div class="stat-box" style="color: var(--primary);"><div>Défauts</div><div id="stat-defauts" class="stat-number">0</div></div>
       </div>
+
+      <!-- Module Scanner -->
+      <div id="scanner-section">
+        <h3>Scanner QR Code</h3>
+        <div id="reader"></div>
+        
+        <div style="margin-top: 15px;">
+          <label>Importer base extincteurs (.CSV) :</label>
+          <input type="file" id="csv-file" accept=".csv" onchange="importCSVToFirestore(event)">
+        </div>
+      </div>
+
+      <!-- Exportations -->
+      <hr style="margin: 20px 0;">
+      <h3>Rapports & Exports</h3>
+      <button class="btn btn-info" onclick="exportToCSV()">📊 Exporter les contrôles (Excel/CSV)</button>
+      <button class="btn btn-primary" onclick="generatePDFReport()">📄 Générer Rapport PDF</button>
     </div>
   </div>
 
@@ -79,14 +104,14 @@
     <button class="btn btn-secondary" onclick="showStep('step-scan')">Annuler</button>
   </div>
 
-  <!-- ÉTAPE 2 : Controle Conforme / Défaut -->
+  <!-- ÉTAPE 2 : Contrôle Conforme / Défaut -->
   <div id="step-choice" class="card hidden">
     <h2>Extincteur Scanné</h2>
     <div style="background: #e9ecef; padding: 10px; border-radius: 6px; margin-bottom: 15px;" id="extincteur-details"></div>
     
     <button class="btn btn-success" onclick="saveControl('CONFORME')">✅ CONFORME</button>
     <button class="btn btn-danger" onclick="showDefects()">⚠️ DÉFAUT CONSTATÉ</button>
-    <button class="btn btn-secondary" onclick="resetApp()">↩️️ Rescanner</button>
+    <button class="btn btn-secondary" onclick="resetApp()">↩ Rescanner</button>
   </div>
 
   <!-- ÉTAPE 3 : Défauts -->
@@ -116,14 +141,14 @@
       from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyAbRHQOMAHVRybBxOgKj6Rl9jRgo-7Lk44",
-  authDomain: "extincteur-check.firebaseapp.com",
-  projectId: "extincteur-check",
-  storageBucket: "extincteur-check.firebasestorage.app",
-  messagingSenderId: "169428808632",
-  appId: "1:169428808632:web:c862dec61a9ff01ed6954d",
-  measurementId: "G-1MGG4D4PBS"
-};
+      apiKey: "AIzaSyAbRHQOMAHVRybBxOgKj6Rl9jRgo-7Lk44",
+      authDomain: "extincteur-check.firebaseapp.com",
+      projectId: "extincteur-check",
+      storageBucket: "extincteur-check.firebasestorage.app",
+      messagingSenderId: "169428808632",
+      appId: "1:169428808632:web:c862dec61a9ff01ed6954d",
+      measurementId: "G-1MGG4D4PBS"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -134,6 +159,7 @@
     let html5QrcodeScanner = null;
     let currentExtincteur = null;
     let isSignUpMode = false;
+    let fetchedControles = [];
 
     // --- AUTHENTIFICATION ---
     window.toggleAuthMode = () => {
@@ -202,16 +228,37 @@
       loadUserSites();
     };
 
-    window.loadSiteData = () => {
+    window.loadSiteData = async () => {
       currentSiteId = document.getElementById('site-select').value;
-      const scannerSec = document.getElementById('scanner-section');
+      const siteDashboard = document.getElementById('site-dashboard');
       if (currentSiteId) {
-        scannerSec.classList.remove('hidden');
+        siteDashboard.classList.remove('hidden');
         initScanner();
+        await updateStatsAndData();
       } else {
-        scannerSec.classList.add('hidden');
+        siteDashboard.classList.add('hidden');
       }
     };
+
+    async function updateStatsAndData() {
+      const q = query(collection(db, "controles"), where("siteId", "==", currentSiteId));
+      const snap = await getDocs(q);
+      
+      fetchedControles = [];
+      let total = 0, conformes = 0, defauts = 0;
+
+      snap.forEach(doc => {
+        const data = doc.data();
+        fetchedControles.push(data);
+        total++;
+        if (data.statut === 'CONFORME') conformes++;
+        else defauts++;
+      });
+
+      document.getElementById('stat-total').innerText = total;
+      document.getElementById('stat-conforme').innerText = conformes;
+      document.getElementById('stat-defauts').innerText = defauts;
+    }
 
     // --- SCANNER & CONTRÔLE ---
     function initScanner() {
@@ -223,7 +270,6 @@
     async function onScanSuccess(decodedText) {
       html5QrcodeScanner.clear();
 
-      // Recherche dans la BDD Firestore du site
       const q = query(collection(db, "extincteurs"), 
         where("siteId", "==", currentSiteId), 
         where("qrcode", "==", decodedText));
@@ -250,13 +296,29 @@
         document.querySelectorAll('input[name="defect"]:checked').forEach(cb => details.push(cb.value));
       }
 
+      // Géolocalisation facultative
+      let location = { lat: null, lng: null };
+      if (navigator.geolocation) {
+        try {
+          const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }));
+          location.lat = pos.coords.latitude;
+          location.lng = pos.coords.longitude;
+        } catch (e) {
+          console.warn("Géolocalisation inaccessible");
+        }
+      }
+
       await addDoc(collection(db, "controles"), {
         siteId: currentSiteId,
         userId: currentUser.uid,
+        userEmail: currentUser.email,
         qrcode: currentExtincteur.qrcode,
+        emplacement: currentExtincteur.emplacement || 'N/C',
         statut: statut,
         details: details.join(' | ') || 'RAS',
-        date: new Date()
+        latitude: location.lat,
+        longitude: location.lng,
+        date: new Date().toLocaleString('fr-FR')
       });
 
       alert("Contrôle enregistré !");
@@ -285,13 +347,55 @@
             });
           }
         }
-        alert("Importation terminée dans la base du site !");
+        alert("Importation terminée !");
       };
       reader.readAsText(file);
     };
 
+    // --- EXPORTS & RAPPORTS ---
+    window.exportToCSV = () => {
+      if (fetchedControles.length === 0) return alert("Aucune donnée à exporter.");
+      
+      const worksheet = XLSX.utils.json_to_sheet(fetchedControles);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Controles");
+      XLSX.writeFile(workbook, `Rapport_Controles_${new Date().toISOString().slice(0,10)}.xlsx`);
+    };
+
+    window.generatePDFReport = () => {
+      if (fetchedControles.length === 0) return alert("Aucune donnée à imprimer.");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(16);
+      doc.text("Rapport d'Inspection - Sécurité Incendie", 14, 20);
+      doc.setFontSize(10);
+      doc.text(`Généré le : ${new Date().toLocaleString('fr-FR')}`, 14, 28);
+      doc.text(`Inspecteur : ${currentUser.email}`, 14, 34);
+
+      let y = 45;
+      doc.setFontSize(11);
+      doc.text("Détails des contrôles :", 14, y);
+      y += 8;
+
+      fetchedControles.forEach((ctrl, index) => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFontSize(9);
+        const statusColor = ctrl.statut === 'CONFORME' ? "[OK]" : "[DÉFAUT]";
+        doc.text(`${index + 1}. QR: ${ctrl.qrcode} | Statut: ${statusColor} | Date: ${ctrl.date}`, 14, y);
+        y += 5;
+        if (ctrl.details && ctrl.details !== 'RAS') {
+          doc.text(`   Anomalies: ${ctrl.details}`, 14, y);
+          y += 5;
+        }
+      });
+
+      doc.save(`Rapport_Incendie_${new Date().toISOString().slice(0,10)}.pdf`);
+    };
+
     window.showDefects = () => showStep('step-defects');
-    window.resetApp = () => { showStep('step-scan'); initScanner(); };
+    window.resetApp = () => { showStep('step-scan'); loadSiteData(); };
     function showStep(id) {
       document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');

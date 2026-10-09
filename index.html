@@ -70,11 +70,11 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
 <h3 style="margin:12px 0 6px;font-size:15px">Scanner QR</h3>
 <div id="reader"></div>
 <label style="font-weight:600;font-size:14px;margin-top:12px;display:block">Importer CSV extincteurs</label>
-<p style="font-size:12px;color:#666">Format : qrcode;emplacement;type</p>
+<p style="font-size:12px;color:#666">Format : qrcode;emplacement;type (GIAI)</p>
 <input type="file" id="csv-file" accept=".csv,.txt" onchange="previewCSV(event)">
 <div id="csv-preview-section" class="hidden">
 <p id="csv-count-label" style="font-size:13px;font-weight:600"></p>
-<div class="csv-preview-box"><table><thead><tr><th>QR</th><th>Empl.</th><th>Type</th></tr></thead><tbody id="csv-preview-body"></tbody></table></div>
+<div class="csv-preview-box"><table><thead><tr><th>GIAI/QR</th><th>Empl.</th><th>Type</th></tr></thead><tbody id="csv-preview-body"></tbody></table></div>
 <button class="btn btn-success" id="btn-validate-csv" onclick="validateAndImportCSV()">✅ Valider et intégrer</button>
 <button class="btn btn-secondary" onclick="cancelCSVPreview()">Annuler</button>
 </div>
@@ -139,18 +139,119 @@ async function loadUserSites(){const s=document.getElementById("site-select");s.
 window.showNewSiteForm=()=>showStep("step-new-site");
 window.createSite=async()=>{const n=document.getElementById("new-site-name").value.trim();if(!n)return alert("Nom requis.");await addDoc(collection(db,"sites"),{name:n,userId:currentUser.uid,createdAt:new Date()});alert("Site créé !");document.getElementById("new-site-name").value="";showStep("step-scan");loadUserSites()};
 window.loadSiteData=async()=>{currentSiteId=document.getElementById("site-select").value;const d=document.getElementById("site-dashboard");if(currentSiteId){const s=document.getElementById("site-select");currentSiteName=s.options[s.selectedIndex].text;d.classList.remove("hidden");initScanner();await updateStatsAndData();cancelCSVPreview()}else{d.classList.add("hidden");currentSiteName=""}};
-async function updateStatsAndData(){const es=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));siteExtincteurs=[];es.forEach(d=>siteExtincteurs.push(d.data()));const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));fetchedControles=[];let t=0,c=0,df=0;controlledQrcodes=new Set();snap.forEach(doc=>{const d=doc.data();fetchedControles.push(d);t++;if(d.statut==="CONFORME")c++;else df++;if(d.qrcode)controlledQrcodes.add(d.qrcode)});fetchedControles.sort((a,b)=>(b.date||"").localeCompare(a.date||""));const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;document.getElementById("stat-progress").innerText=nE?nO+"/"+nE:"0/0";document.getElementById("stat-total").innerText=t;document.getElementById("stat-conforme").innerText=c;document.getElementById("stat-defauts").innerText=df;const msg=document.getElementById("pdf-block-msg");if(nE>0&&nO<nE){msg.textContent="⚠️ PDF bloqué : "+nO+"/"+nE+" — "+(nE-nO)+" manquant(s)";msg.style.background="#fff3cd";msg.style.color="#856404";msg.classList.remove("hidden")}else if(nE>0){msg.innerHTML="✅ "+nO+"/"+nE+" — PDF disponible<br><small>Période terminée → utilisez « Reset période » pour le mois suivant</small>";msg.style.background="#d4edda";msg.style.color="#155724";msg.classList.remove("hidden")}else msg.classList.add("hidden")};
+async function updateStatsAndData(){const es=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));siteExtincteurs=[];es.forEach(d=>siteExtincteurs.push(d.data()));const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));fetchedControles=[];let t=0,c=0,df=0;controlledQrcodes=new Set();snap.forEach(doc=>{const d=doc.data();fetchedControles.push(d);t++;if(d.statut==="CONFORME")c++;else df++;if(d.qrcode)controlledQrcodes.add(d.qrcode)});fetchedControles.sort((a,b)=>(b.date||"").localeCompare(a.date||""));const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;document.getElementById("stat-progress").innerText=nE?nO+"/"+nE:"0/0";document.getElementById("stat-total").innerText=t;document.getElementById("stat-conforme").innerText=c;document.getElementById("stat-defauts").innerText=df;const msg=document.getElementById("pdf-block-msg");if(nE>0&&nO<nE){msg.textContent="📋 Progression : "+nO+"/"+nE+" contrôlés — "+(nE-nO)+" restant(s) — PDF disponible";msg.style.background="#e8f4fd";msg.style.color="#0c5460";msg.classList.remove("hidden")}else if(nE>0){msg.innerHTML="✅ "+nO+"/"+nE+" — Tous contrôlés — PDF disponible<br><small>Période terminée → « Reset période » pour le mois suivant</small>";msg.style.background="#d4edda";msg.style.color="#155724";msg.classList.remove("hidden")}else msg.classList.add("hidden")};
 function initScanner(){if(html5QrcodeScanner){try{html5QrcodeScanner.clear()}catch(e){}}html5QrcodeScanner=new Html5QrcodeScanner("reader",{fps:10,qrbox:250},false);html5QrcodeScanner.render(onScanSuccess)};
-async function onScanSuccess(txt){try{html5QrcodeScanner.clear()}catch(e){}const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId),where("qrcode","==",txt.trim())));if(!snap.empty){currentExtincteur=snap.docs[0].data();document.getElementById("extincteur-details").innerHTML=`<p><b>QR :</b> ${currentExtincteur.qrcode}</p><p><b>Emplacement :</b> ${currentExtincteur.emplacement||"N/C"}</p><p><b>Type :</b> ${currentExtincteur.type||"N/C"}</p><p><span class="badge badge-ok">Enregistré</span></p>`}else{currentExtincteur={qrcode:txt.trim(),emplacement:"Inconnu",type:"Nouveau"};document.getElementById("extincteur-details").innerHTML=`<p><b>QR :</b> ${txt.trim()}</p><p><span class="badge badge-ko">Non enregistré</span></p>`}showStep("step-choice")};
+async function onScanSuccess(txt){
+  try{html5QrcodeScanner.clear()}catch(e){}
+  const raw=(txt||"").trim();
+  let match=null;
+  if(!siteExtincteurs.length)await updateStatsAndData();
+  match=siteExtincteurs.find(e=>e.qrcode===raw)
+    ||siteExtincteurs.find(e=>String(e.qrcode).trim().toLowerCase()===raw.toLowerCase())
+    ||siteExtincteurs.find(e=>raw.includes(String(e.qrcode).trim())||String(e.qrcode).trim().includes(raw));
+  if(match){
+    currentExtincteur={qrcode:match.qrcode,emplacement:match.emplacement||"N/C",type:match.type||"N/C"};
+    const deja=controlledQrcodes.has(match.qrcode);
+    document.getElementById("extincteur-details").innerHTML=
+      `<p><b>GIAI / QR :</b> ${match.qrcode}</p>`+
+      `<p><b>Emplacement :</b> ${match.emplacement||"N/C"}</p>`+
+      `<p><b>Type :</b> ${match.type||"N/C"}</p>`+
+      `<p><span class="badge badge-ok">Ligne trouvée dans la liste</span></p>`+
+      (deja?`<p><span class="badge" style="background:#fff3cd;color:#856404">Déjà contrôlé cette période</span></p>`:"");
+  } else {
+    const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId),where("qrcode","==",raw)));
+    if(!snap.empty){
+      currentExtincteur=snap.docs[0].data();
+      document.getElementById("extincteur-details").innerHTML=
+        `<p><b>GIAI / QR :</b> ${currentExtincteur.qrcode}</p>`+
+        `<p><b>Emplacement :</b> ${currentExtincteur.emplacement||"N/C"}</p>`+
+        `<p><b>Type :</b> ${currentExtincteur.type||"N/C"}</p>`+
+        `<p><span class="badge badge-ok">Trouvé en base</span></p>`;
+    } else {
+      currentExtincteur={qrcode:raw,emplacement:"Inconnu",type:"Hors liste"};
+      document.getElementById("extincteur-details").innerHTML=
+        `<p><b>Code scanné :</b> ${raw}</p>`+
+        `<p><span class="badge badge-ko">Pas dans la liste importée</span></p>`+
+        `<p style="font-size:12px;color:#666">Vous pouvez quand même enregistrer un contrôle.</p>`;
+    }
+  }
+  showStep("step-choice");
+}
 window.saveControl=async statut=>{let details=[],note="";if(statut==="NON CONFORME"){document.querySelectorAll('input[name="defect"]:checked').forEach(cb=>details.push(cb.value));note=(document.getElementById("defect-note")?.value||"").trim();if(!details.length&&!note)return alert("Sélectionnez un défaut ou une note.")}let loc={lat:null,lng:null};if(navigator.geolocation){try{const pos=await new Promise((r,j)=>navigator.geolocation.getCurrentPosition(r,j,{timeout:4000}));loc.lat=pos.coords.latitude;loc.lng=pos.coords.longitude}catch(e){}}const now=new Date();await addDoc(collection(db,"controles"),{siteId:currentSiteId,siteName:currentSiteName,userId:currentUser.uid,userEmail:currentUser.email,technicien:currentUser.email,qrcode:currentExtincteur.qrcode,emplacement:currentExtincteur.emplacement||"N/C",type:currentExtincteur.type||"N/C",statut,details:details.join(" | ")||"RAS",note:note||"",latitude:loc.lat,longitude:loc.lng,date:now.toLocaleString("fr-FR"),timestamp:now.getTime()});document.querySelectorAll('input[name="defect"]').forEach(cb=>cb.checked=false);if(document.getElementById("defect-note"))document.getElementById("defect-note").value="";alert("Contrôle enregistré !");resetApp()};
-window.previewCSV=ev=>{const f=ev.target.files[0];if(!f)return;if(!currentSiteId){alert("Sélectionnez un site.");ev.target.value="";return}const r=new FileReader();r.onload=e=>{const text=e.target.result,lines=text.split(/\r?\n/),sep=text.includes(";")?";":",";pendingCSVData=[];let start=0;if(lines.length&&/qrcode|qr|emplacement|type/i.test(lines[0]))start=1;for(let i=start;i<lines.length;i++){if(!lines[i].trim())continue;const cols=lines[i].split(sep).map(c=>c.replace(/^"|"$/g,"").trim());if(cols[0])pendingCSVData.push({qrcode:cols[0],emplacement:cols[1]||"",type:cols[2]||""})}if(!pendingCSVData.length){alert("Aucun extincteur.");cancelCSVPreview();return}const tb=document.getElementById("csv-preview-body");tb.innerHTML="";pendingCSVData.forEach(row=>{tb.innerHTML+=`<tr><td>${row.qrcode}</td><td>${row.emplacement||"—"}</td><td>${row.type||"—"}</td></tr>`});document.getElementById("csv-count-label").innerText=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';document.getElementById("csv-preview-section").classList.remove("hidden")};r.readAsText(f,"UTF-8")};
+window.previewCSV=ev=>{const f=ev.target.files[0];if(!f)return;if(!currentSiteId){alert("Sélectionnez un site.");ev.target.value="";return}const r=new FileReader();r.onload=e=>{const text=e.target.result,lines=text.split(/\r?\n/),sep=text.includes(";")?";":",";pendingCSVData=[];let start=0;if(lines.length&&/qrcode|qr|giai|emplacement|type/i.test(lines[0]))start=1;for(let i=start;i<lines.length;i++){if(!lines[i].trim())continue;const cols=lines[i].split(sep).map(c=>c.replace(/^"|"$/g,"").trim());if(cols[0])pendingCSVData.push({qrcode:cols[0],emplacement:cols[1]||"",type:cols[2]||""})}if(!pendingCSVData.length){alert("Aucun extincteur.");cancelCSVPreview();return}const tb=document.getElementById("csv-preview-body");tb.innerHTML="";pendingCSVData.forEach(row=>{tb.innerHTML+=`<tr><td>${row.qrcode}</td><td>${row.emplacement||"—"}</td><td>${row.type||"—"}</td></tr>`});document.getElementById("csv-count-label").innerText=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';document.getElementById("csv-preview-section").classList.remove("hidden")};r.readAsText(f,"UTF-8")};
 window.validateAndImportCSV=async()=>{if(!pendingCSVData.length||!currentSiteId)return alert("Aucune donnée.");const btn=document.getElementById("btn-validate-csv");btn.disabled=true;btn.innerText="Import…";try{let n=0;for(const row of pendingCSVData){await addDoc(collection(db,"extincteurs"),{siteId:currentSiteId,qrcode:row.qrcode,emplacement:row.emplacement,type:row.type});n++}alert("✅ "+n+" extincteur(s) intégré(s).");cancelCSVPreview();await updateStatsAndData()}catch(e){alert("Erreur : "+e.message);btn.disabled=false;btn.innerText="✅ Valider et intégrer"}};
 window.cancelCSVPreview=()=>{pendingCSVData=[];document.getElementById("csv-preview-section").classList.add("hidden");document.getElementById("csv-preview-body").innerHTML="";document.getElementById("csv-file").value="";const b=document.getElementById("btn-validate-csv");if(b){b.disabled=false;b.innerText="✅ Valider et intégrer"}};
 window.exportToCSV=()=>{if(!fetchedControles.length)return alert("Aucune donnée.");const data=fetchedControles.map(c=>({Date:c.date,Site:c.siteName||currentSiteName,Tech:c.userEmail,QR:c.qrcode,Empl:c.emplacement,Type:c.type||"",Statut:c.statut,Defauts:c.details,Note:c.note||""}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Controles");XLSX.writeFile(wb,"Rapport_"+(currentSiteName||"site")+"_"+new Date().toISOString().slice(0,10)+".xlsx")};
-window.generatePDFReport=async()=>{if(!fetchedControles.length)return alert("Aucune donnée.");const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;if(nE===0)return alert("Aucun extincteur. Importez le CSV.");if(nO<nE){const miss=siteExtincteurs.filter(e=>!controlledQrcodes.has(e.qrcode)).slice(0,8).map(e=>"• "+e.qrcode+" ("+(e.emplacement||"N/C")+")").join("\n");return alert("❌ PDF bloqué : "+(nE-nO)+" non contrôlé(s).\nProgression : "+nO+"/"+nE+"\n\n"+miss)}const{jsPDF}=window.jspdf;const doc=new jsPDF();const pw=doc.internal.pageSize.getWidth(),m=14,now=new Date(),tech=currentUser?.email||"N/C",total=fetchedControles.length,conf=fetchedControles.filter(c=>c.statut==="CONFORME").length;doc.setFillColor(227,6,19);doc.rect(0,0,pw,28,"F");doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont("helvetica","bold");doc.text("SBB CFF FFS",m,12);doc.setFontSize(9);doc.setFont("helvetica","normal");doc.text("Inspection — Inspect360",m,20);doc.text(now.toLocaleString("fr-FR"),pw-m,12,{align:"right"});let y=36;doc.setTextColor(40,40,40);doc.setFontSize(10);["Site : "+(currentSiteName||"N/C"),"Technicien : "+tech,"Extincteurs contrôlés : "+nO+"/"+nE,"Contrôles : "+total+" | OK : "+conf+" | Défauts : "+(total-conf)].forEach(l=>{doc.text(l,m,y);y+=6});y+=4;doc.setDrawColor(227,6,19);doc.line(m,y,pw-m,y);y+=8;doc.setFont("helvetica","bold");doc.text("Détail",m,y);y+=8;doc.setFont("helvetica","normal");doc.setFontSize(8);fetchedControles.forEach((c,i)=>{if(y>270){doc.addPage();y=20}const ok=c.statut==="CONFORME";doc.setTextColor(ok?39:192,ok?174:57,ok?96:43);doc.text((i+1)+". "+c.statut+" | QR: "+c.qrcode+" | "+(c.emplacement||"N/C"),m,y);y+=4;doc.setTextColor(80,80,80);doc.text("   "+(c.date||"")+" | "+(c.details||""),m,y);y+=4;if(c.note){doc.text("   Note: "+c.note,m,y);y+=4}y+=2});const pc=doc.internal.getNumberOfPages();for(let i=1;i<=pc;i++){doc.setPage(i);doc.setFontSize(7);doc.setTextColor(140,140,140);doc.text("SBB CFF FFS | "+nO+"/"+nE+" | p."+i+"/"+pc,pw/2,290,{align:"center"});doc.text("Application créée par Svarodina & CO",m,290)}doc.save("Rapport_CFF_"+(currentSiteName||"site").replace(/\s+/g,"_")+"_"+now.toISOString().slice(0,10)+".pdf")};
-window.showExtincteurList=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const box=document.getElementById("ext-list-box");const sum=document.getElementById("ext-list-summary");const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;sum.innerText=nE+" extincteur(s) — "+nO+" contrôlé(s) — "+(nE-nO)+" restant(s)";if(!nE){box.innerHTML='<p style="color:#888">Aucun extincteur. Importez un CSV.</p>'}else{let rows='<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#e9ecef"><th style="padding:6px;text-align:left">QR</th><th style="padding:6px;text-align:left">Emplacement</th><th style="padding:6px;text-align:left">Type</th><th style="padding:6px">Statut</th></tr></thead><tbody>';siteExtincteurs.forEach(e=>{const done=controlledQrcodes.has(e.qrcode);const badge=done?'<span class="badge badge-ok">Contrôlé</span>':'<span class="badge badge-ko">À faire</span>';rows+=`<tr style="border-bottom:1px solid #eee"><td style="padding:5px">${e.qrcode}</td><td style="padding:5px">${e.emplacement||"—"}</td><td style="padding:5px">${e.type||"—"}</td><td style="padding:5px;text-align:center">${badge}</td></tr>`});rows+="</tbody></table>";box.innerHTML=rows}showStep("step-ext-list")};
+window.generatePDFReport=async()=>{
+  if(!currentSiteId)return alert("Sélectionnez un site.");
+  await updateStatsAndData();
+  const nE=siteExtincteurs.length;
+  if(nE===0)return alert("Aucun extincteur importé. Importez d'abord le CSV.");
+  const nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  const pw=doc.internal.pageSize.getWidth(),m=14,now=new Date(),tech=currentUser?.email||"N/C";
+  const total=fetchedControles.length,conf=fetchedControles.filter(c=>c.statut==="CONFORME").length;
+  doc.setFillColor(227,6,19);doc.rect(0,0,pw,28,"F");
+  doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont("helvetica","bold");
+  doc.text("SBB CFF FFS",m,12);
+  doc.setFontSize(9);doc.setFont("helvetica","normal");
+  doc.text("Inspection — Inspect360",m,20);
+  doc.text(now.toLocaleString("fr-FR"),pw-m,12,{align:"right"});
+  let y=36;
+  doc.setTextColor(40,40,40);doc.setFontSize(10);
+  ["Site : "+(currentSiteName||"N/C"),"Technicien : "+tech,
+   "Progression : "+nO+"/"+nE+" contrôlés ("+Math.round(nO/nE*100)+"%) — "+(nE-nO)+" restant(s)",
+   "Contrôles enregistrés : "+total+" | Conformes : "+conf+" | Défauts : "+(total-conf)
+  ].forEach(l=>{doc.text(l,m,y);y+=6});
+  y+=4;doc.setDrawColor(227,6,19);doc.line(m,y,pw-m,y);y+=8;
+  doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(39,174,96);
+  doc.text("Contrôles effectués ("+nO+")",m,y);y+=7;
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(40,40,40);
+  const done=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode));
+  if(!done.length){doc.setTextColor(120,120,120);doc.text("Aucun contrôle effectué pour le moment.",m,y);y+=6}
+  else{
+    done.forEach((e,i)=>{
+      if(y>275){doc.addPage();y=20}
+      const ctrl=fetchedControles.find(c=>c.qrcode===e.qrcode);
+      const st=ctrl?ctrl.statut:"FAIT";
+      const ok=st==="CONFORME";
+      doc.setTextColor(ok?39:192,ok?174:57,ok?96:43);
+      doc.text((i+1)+". ["+st+"] GIAI: "+e.qrcode+" | "+(e.emplacement||"N/C")+" | "+(e.type||""),m,y);y+=4;
+      doc.setTextColor(80,80,80);
+      if(ctrl){
+        doc.text("   Date: "+(ctrl.date||"")+" | Tech: "+(ctrl.userEmail||""),m,y);y+=3.5;
+        if(ctrl.details&&ctrl.details!=="RAS"){doc.text("   Défauts: "+ctrl.details,m,y);y+=3.5}
+        if(ctrl.note){doc.text("   Note: "+ctrl.note,m,y);y+=3.5}
+      }
+      y+=2;
+    });
+  }
+  y+=4;
+  if(y>260){doc.addPage();y=20}
+  doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(192,57,43);
+  const pending=siteExtincteurs.filter(e=>!controlledQrcodes.has(e.qrcode));
+  doc.text("Restant à contrôler ("+pending.length+")",m,y);y+=7;
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(40,40,40);
+  if(!pending.length){doc.setTextColor(39,174,96);doc.text("Tous les extincteurs de la liste ont été contrôlés.",m,y);y+=6}
+  else{
+    pending.forEach((e,i)=>{
+      if(y>280){doc.addPage();y=20}
+      doc.setTextColor(150,40,40);
+      doc.text((i+1)+". [À FAIRE] GIAI: "+e.qrcode+" | "+(e.emplacement||"N/C")+" | "+(e.type||""),m,y);y+=5;
+    });
+  }
+  const pc=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pc;i++){
+    doc.setPage(i);doc.setFontSize(7);doc.setTextColor(140,140,140);
+    doc.text("SBB CFF FFS | "+nO+"/"+nE+" | p."+i+"/"+pc,pw/2,290,{align:"center"});
+    doc.text("Application créée par Svarodina & CO",m,290);
+  }
+  doc.save("Rapport_CFF_"+(currentSiteName||"site").replace(/\s+/g,"_")+"_"+now.toISOString().slice(0,10)+".pdf");
+};
+window.showExtincteurList=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const box=document.getElementById("ext-list-box");const sum=document.getElementById("ext-list-summary");const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;sum.innerText=nE+" extincteur(s) — "+nO+" contrôlé(s) — "+(nE-nO)+" restant(s)";if(!nE){box.innerHTML='<p style="color:#888">Aucun extincteur. Importez un CSV.</p>'}else{let rows='<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#e9ecef"><th style="padding:6px;text-align:left">GIAI/QR</th><th style="padding:6px;text-align:left">Emplacement</th><th style="padding:6px;text-align:left">Type</th><th style="padding:6px">Statut</th></tr></thead><tbody>';siteExtincteurs.forEach(e=>{const done=controlledQrcodes.has(e.qrcode);const badge=done?'<span class="badge badge-ok">Contrôlé</span>':'<span class="badge badge-ko">À faire</span>';rows+=`<tr style="border-bottom:1px solid #eee"><td style="padding:5px">${e.qrcode}</td><td style="padding:5px">${e.emplacement||"—"}</td><td style="padding:5px">${e.type||"—"}</td><td style="padding:5px;text-align:center">${badge}</td></tr>`});rows+="</tbody></table>";box.innerHTML=rows}showStep("step-ext-list")};
 window.resetPeriod=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;const nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;const msg="RESET PÉRIODE / NOUVEAU MOIS\n\nSite : "+currentSiteName+"\nProgression : "+nO+"/"+nE+"\nContrôles : "+fetchedControles.length+"\n\nSupprime TOUS les contrôles de ce site.\nLes extincteurs importés sont conservés.\n\nConfirmer ?";if(!confirm(msg))return;if(!confirm("Dernière confirmation : effacer "+fetchedControles.length+" contrôle(s) ?"))return;try{const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}alert("✅ Période réinitialisée.\n"+deleted+" contrôle(s) supprimé(s).\nProgression : 0/"+nE);await updateStatsAndData()}catch(e){alert("Erreur reset : "+e.message)}};
-window.deleteImportedExtincteurs=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;if(!nE)return alert("Aucun extincteur importé sur ce site.");if(!confirm("SUPPRIMER TOUTE la liste des extincteurs de ce site ?\n\nSite : "+currentSiteName+"\n"+nE+" extincteur(s) seront TOUS effacés d'un coup.\n\nConfirmer ?"))return;if(!confirm("Dernière confirmation : supprimer les "+nE+" extincteur(s) du site \""+currentSiteName+"\" ?"))return;try{const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}siteExtincteurs=[];alert("✅ Liste entièrement supprimée.\n"+deleted+" extincteur(s) effacés du site \""+currentSiteName+"\".\nVous pouvez réimporter un CSV propre.");await updateStatsAndData()}catch(e){alert("Erreur suppression : "+e.message)}};
+window.deleteImportedExtincteurs=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;if(!nE)return alert("Aucun extincteur importé sur ce site.");if(!confirm("SUPPRIMER TOUTE la liste des extincteurs de ce site ?\n\nSite : "+currentSiteName+"\n"+nE+" extincteur(s) seront TOUS effacés d'un coup.\n\nConfirmer ?"))return;if(!confirm("Dernière confirmation : supprimer les "+nE+" extincteur(s) du site \""+currentSiteName+"\" ?"))return;try{const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}siteExtincteurs=[];alert("✅ Liste entièrement supprimée.\n"+deleted+" extincteur(s) effacés.\nVous pouvez réimporter un CSV propre.");await updateStatsAndData()}catch(e){alert("Erreur suppression : "+e.message)}};
 window.showDefects=()=>showStep("step-defects");
 window.resetApp=()=>{showStep("step-scan");if(currentSiteId)loadSiteData()};
 function showStep(id){document.querySelectorAll(".card").forEach(c=>c.classList.add("hidden"));document.getElementById(id).classList.remove("hidden")}

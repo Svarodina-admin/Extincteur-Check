@@ -25,6 +25,7 @@
     .card { background: var(--card); border-radius: 14px; padding: 22px; width: 100%; max-width: 520px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 18px; }
     .btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 15px; font-weight: 600; color: white; cursor: pointer; margin-top: 10px; transition: transform 0.1s, opacity 0.2s; }
     .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-success { background: var(--success); }
     .btn-danger { background: var(--primary); }
     .btn-secondary { background: #7f8c8d; }
@@ -50,6 +51,13 @@
     .badge-ko { background: #f8d7da; color: #721c24; }
     hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
     .note-label { font-weight: 600; margin-top: 8px; display: block; }
+    /* CSV Preview */
+    .csv-preview-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 10px; padding: 12px; margin-top: 12px; max-height: 260px; overflow-y: auto; }
+    .csv-preview-box table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .csv-preview-box th { background: #e9ecef; padding: 6px 8px; text-align: left; position: sticky; top: 0; }
+    .csv-preview-box td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+    .csv-preview-box tr:last-child td { border-bottom: none; }
+    .csv-count { font-size: 13px; color: #555; margin: 8px 0 4px; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -111,7 +119,22 @@
         <div style="margin-top: 16px;">
           <label style="font-weight:600;">Importer liste extincteurs (.CSV)</label>
           <p style="font-size:12px; color:#666; margin:4px 0 8px;">Format : qrcode;emplacement;type (une ligne par extincteur)</p>
-          <input type="file" id="csv-file" accept=".csv,.txt" onchange="importCSVToFirestore(event)">
+          <input type="file" id="csv-file" accept=".csv,.txt" onchange="previewCSV(event)">
+
+          <!-- Zone de prévisualisation + validation -->
+          <div id="csv-preview-section" class="hidden">
+            <p class="csv-count" id="csv-count-label">0 extincteur(s) détecté(s)</p>
+            <div class="csv-preview-box">
+              <table>
+                <thead>
+                  <tr><th>QR Code</th><th>Emplacement</th><th>Type</th></tr>
+                </thead>
+                <tbody id="csv-preview-body"></tbody>
+              </table>
+            </div>
+            <button class="btn btn-success" id="btn-validate-csv" onclick="validateAndImportCSV()">✅ Valider et intégrer au site</button>
+            <button class="btn btn-secondary" onclick="cancelCSVPreview()">Annuler</button>
+          </div>
         </div>
       </div>
 
@@ -193,6 +216,7 @@
     let currentExtincteur = null;
     let isSignUpMode = false;
     let fetchedControles = [];
+    let pendingCSVData = []; // données CSV en attente de validation
 
     // --- AUTHENTIFICATION ---
     window.toggleAuthMode = () => {
@@ -273,6 +297,7 @@
         siteDashboard.classList.remove('hidden');
         initScanner();
         await updateStatsAndData();
+        cancelCSVPreview(); // reset preview si on change de site
       } else {
         siteDashboard.classList.add('hidden');
         currentSiteName = "";
@@ -294,7 +319,6 @@
         else defauts++;
       });
 
-      // Tri par date décroissante pour le rapport
       fetchedControles.sort((a, b) => {
         const da = a.date || '';
         const db = b.date || '';
@@ -354,7 +378,6 @@
         }
       }
 
-      // Géolocalisation facultative
       let location = { lat: null, lng: null };
       if (navigator.geolocation) {
         try {
@@ -385,7 +408,6 @@
         timestamp: now.getTime()
       });
 
-      // Reset form défauts
       document.querySelectorAll('input[name="defect"]').forEach(cb => cb.checked = false);
       if (document.getElementById('defect-note')) document.getElementById('defect-note').value = '';
 
@@ -393,35 +415,107 @@
       resetApp();
     };
 
-    // --- IMPORT CSV VERS CLOUD (par site) ---
-    window.importCSVToFirestore = (event) => {
+    // --- IMPORT CSV : PRÉVISUALISATION + VALIDATION ---
+    window.previewCSV = (event) => {
       const file = event.target.files[0];
-      if (!file || !currentSiteId) return alert("Sélectionnez un site d'abord.");
+      if (!file) return;
+      if (!currentSiteId) {
+        alert("Sélectionnez un site d'abord.");
+        event.target.value = '';
+        return;
+      }
 
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = (e) => {
         const text = e.target.result;
         const lines = text.split(/\r?\n/);
         const sep = text.includes(';') ? ';' : ',';
-        let count = 0;
+        pendingCSVData = [];
 
-        for (let i = 1; i < lines.length; i++) {
+        // Détecter si la 1ère ligne est un en-tête
+        let startIdx = 0;
+        if (lines.length > 0) {
+          const first = lines[0].toLowerCase();
+          if (first.includes('qrcode') || first.includes('qr') || first.includes('emplacement') || first.includes('type')) {
+            startIdx = 1;
+          }
+        }
+
+        for (let i = startIdx; i < lines.length; i++) {
           if (!lines[i].trim()) continue;
           const cols = lines[i].split(sep).map(c => c.replace(/^"|"$/g, '').trim());
           if (cols[0]) {
-            await addDoc(collection(db, "extincteurs"), {
-              siteId: currentSiteId,
+            pendingCSVData.push({
               qrcode: cols[0],
               emplacement: cols[1] || '',
               type: cols[2] || ''
             });
-            count++;
           }
         }
-        alert(`Importation terminée : ${count} extincteur(s) ajouté(s) au site "${currentSiteName}".`);
-        event.target.value = '';
+
+        if (pendingCSVData.length === 0) {
+          alert("Aucun extincteur détecté dans ce fichier.");
+          cancelCSVPreview();
+          return;
+        }
+
+        // Afficher la prévisualisation
+        const tbody = document.getElementById('csv-preview-body');
+        tbody.innerHTML = '';
+        pendingCSVData.forEach(row => {
+          tbody.innerHTML += `<tr>
+            <td>${row.qrcode}</td>
+            <td>${row.emplacement || '—'}</td>
+            <td>${row.type || '—'}</td>
+          </tr>`;
+        });
+
+        document.getElementById('csv-count-label').innerText =
+          `${pendingCSVData.length} extincteur(s) détecté(s) pour le site "${currentSiteName}"`;
+        document.getElementById('csv-preview-section').classList.remove('hidden');
       };
       reader.readAsText(file, 'UTF-8');
+    };
+
+    window.validateAndImportCSV = async () => {
+      if (!pendingCSVData.length || !currentSiteId) {
+        return alert("Aucune donnée à importer ou site non sélectionné.");
+      }
+
+      const btn = document.getElementById('btn-validate-csv');
+      btn.disabled = true;
+      btn.innerText = 'Importation en cours…';
+
+      try {
+        let count = 0;
+        for (const row of pendingCSVData) {
+          await addDoc(collection(db, "extincteurs"), {
+            siteId: currentSiteId,
+            qrcode: row.qrcode,
+            emplacement: row.emplacement,
+            type: row.type
+          });
+          count++;
+        }
+        alert(`✅ ${count} extincteur(s) intégré(s) au site "${currentSiteName}".`);
+        cancelCSVPreview();
+      } catch (err) {
+        alert("Erreur lors de l'import : " + err.message);
+        btn.disabled = false;
+        btn.innerText = '✅ Valider et intégrer au site';
+      }
+    };
+
+    window.cancelCSVPreview = () => {
+      pendingCSVData = [];
+      document.getElementById('csv-preview-section').classList.add('hidden');
+      document.getElementById('csv-preview-body').innerHTML = '';
+      document.getElementById('csv-file').value = '';
+      const btn = document.getElementById('btn-validate-csv');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = '✅ Valider et intégrer au site';
+      }
     };
 
     // --- EXPORTS & RAPPORTS ---
@@ -457,7 +551,6 @@
       const margin = 16;
       let y = 0;
 
-      // === EN-TÊTE LOGO CFF ===
       doc.setFillColor(192, 57, 43);
       doc.rect(0, 0, pageWidth, 28, 'F');
 
@@ -472,14 +565,12 @@
       doc.setFontSize(9);
       doc.text('Rapport d\'inspection sécurité incendie', margin + 28, 17);
 
-      // Date génération
       const now = new Date();
       doc.setFontSize(8);
       doc.text(`Généré le ${now.toLocaleString('fr-FR')}`, pageWidth - margin, 14, { align: 'right' });
 
       y = 36;
 
-      // === INFOS GÉNÉRALES ===
       doc.setTextColor(44, 62, 80);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
@@ -495,7 +586,6 @@
       const conformes = fetchedControles.filter(c => c.statut === 'CONFORME').length;
       const defauts = total - conformes;
 
-      // Date de fin = date du dernier contrôle enregistré
       let dateFin = 'N/C';
       if (fetchedControles.length > 0) {
         dateFin = fetchedControles[0].date || now.toLocaleString('fr-FR');
@@ -518,7 +608,6 @@
       doc.line(margin, y, pageWidth - margin, y);
       y += 8;
 
-      // === DÉTAILS DES CONTRÔLES ===
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.setTextColor(44, 62, 80);
@@ -572,7 +661,6 @@
         y += 6;
       });
 
-      // === PIED DE PAGE ===
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -582,7 +670,6 @@
         doc.text(`Technicien: ${tech}`, margin, 290);
       }
 
-      // Signature zone sur dernière page
       doc.setPage(pageCount);
       let sigY = 270;
       if (y < 250) sigY = Math.max(y + 10, 250);

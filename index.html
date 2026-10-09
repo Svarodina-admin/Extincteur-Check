@@ -91,13 +91,13 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
 <h2 style="margin-top:0">Liste extincteurs</h2>
 <p id="ext-list-summary" style="font-size:13px;color:#555"></p>
 <div id="ext-list-box" style="max-height:360px;overflow-y:auto;font-size:13px"></div>
-<button class="btn btn-secondary" onclick="showStep('step-scan');if(currentSiteId)loadSiteData()">↩ Retour</button>
+<button class="btn btn-secondary" onclick="goBack()">↩ Retour</button>
 </div>
 <div id="step-new-site" class="card hidden">
 <h2>Nouveau Site</h2>
 <input type="text" id="new-site-name" placeholder="Nom du site">
 <button class="btn btn-success" onclick="createSite()">Créer</button>
-<button class="btn btn-secondary" onclick="showStep('step-scan')">Annuler</button>
+<button class="btn btn-secondary" onclick="goBack()">Annuler</button>
 </div>
 <div id="step-choice" class="card hidden">
 <h2 style="margin-top:0">Fiche Extincteur</h2>
@@ -253,8 +253,23 @@ window.showExtincteurList=async()=>{if(!currentSiteId)return alert("Sélectionne
 window.resetPeriod=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;const nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;const msg="RESET PÉRIODE / NOUVEAU MOIS\n\nSite : "+currentSiteName+"\nProgression : "+nO+"/"+nE+"\nContrôles : "+fetchedControles.length+"\n\nSupprime TOUS les contrôles de ce site.\nLes extincteurs importés sont conservés.\n\nConfirmer ?";if(!confirm(msg))return;if(!confirm("Dernière confirmation : effacer "+fetchedControles.length+" contrôle(s) ?"))return;try{const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}alert("✅ Période réinitialisée.\n"+deleted+" contrôle(s) supprimé(s).\nProgression : 0/"+nE);await updateStatsAndData()}catch(e){alert("Erreur reset : "+e.message)}};
 window.deleteImportedExtincteurs=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;if(!nE)return alert("Aucun extincteur importé sur ce site.");if(!confirm("SUPPRIMER TOUTE la liste des extincteurs de ce site ?\n\nSite : "+currentSiteName+"\n"+nE+" extincteur(s) seront TOUS effacés d'un coup.\n\nConfirmer ?"))return;if(!confirm("Dernière confirmation : supprimer les "+nE+" extincteur(s) du site \""+currentSiteName+"\" ?"))return;try{const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}siteExtincteurs=[];alert("✅ Liste entièrement supprimée.\n"+deleted+" extincteur(s) effacés.\nVous pouvez réimporter un CSV propre.");await updateStatsAndData()}catch(e){alert("Erreur suppression : "+e.message)}};
 window.showDefects=()=>showStep("step-defects");
-window.resetApp=()=>{showStep("step-scan");if(currentSiteId)loadSiteData()};
-function showStep(id){document.querySelectorAll(".card").forEach(c=>c.classList.add("hidden"));document.getElementById(id).classList.remove("hidden")}
+window.goBack=async()=>{
+  showStep("step-scan");
+  if(currentSiteId){
+    document.getElementById("site-dashboard").classList.remove("hidden");
+    try{if(html5QrcodeScanner)await html5QrcodeScanner.clear()}catch(e){}
+    html5QrcodeScanner=null;
+    setTimeout(()=>{try{initScanner()}catch(e){console.error(e)}},250);
+    await updateStatsAndData();
+  }
+};
+window.resetApp=()=>{goBack()};
+function showStep(id){
+  document.querySelectorAll(".card").forEach(c=>c.classList.add("hidden"));
+  const el=document.getElementById(id);
+  if(el)el.classList.remove("hidden");
+  else console.error("Écran introuvable:",id);
+}
 </script>
 </body>
 </html>

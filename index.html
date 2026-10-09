@@ -1,1 +1,147 @@
-PLACEHOLDER_WILL_FAIL
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspect360</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--primary:#c0392b;--success:#27ae60;--bg:#f0f2f5;--card:#fff;--info:#2980b9;--navy:#0a1f4d}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{background:var(--bg);color:#333;margin:0;padding:12px;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+.card{background:var(--card);border-radius:14px;padding:22px;width:100%;max-width:520px;box-shadow:0 6px 18px rgba(0,0,0,.08);margin-bottom:18px}
+.btn{width:100%;padding:13px;border:none;border-radius:9px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;margin-top:10px}
+.btn:disabled{opacity:.5}.btn-success{background:var(--success)}.btn-danger{background:var(--primary)}
+.btn-secondary{background:#7f8c8d}.btn-primary{background:#3498db}.btn-info{background:var(--info)}
+.hidden{display:none!important}
+input,select,textarea{width:100%;padding:11px;margin:6px 0 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:15px}
+textarea{min-height:70px}
+.checkbox-group{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.checkbox-label{display:flex;align-items:center;gap:8px;font-size:13px;background:#f1f3f5;padding:8px 10px;border-radius:8px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.stat-box{background:#eef1f5;padding:10px 6px;border-radius:10px;text-align:center}
+.stat-number{font-size:20px;font-weight:700;margin-top:2px}
+.header-logo{text-align:center;margin-bottom:10px}
+.logo-company{font-size:22px;font-weight:800;color:var(--navy);letter-spacing:1px}
+.logo-company span{color:#c9a227;font-size:14px;display:block;margin-top:2px}
+.logo-cff-bar{display:inline-block;background:#E30613;border-radius:4px;padding:8px 20px;color:#fff;font-weight:800;letter-spacing:2px}
+.subtitle{text-align:center;color:#666;font-size:13px;margin-top:6px}
+.footer-credit{text-align:center;font-size:11px;color:#888;margin-top:16px;padding-top:12px;border-top:1px solid #eee}
+#extincteur-details{background:#eef2f7;padding:12px;border-radius:10px;margin-bottom:14px;border-left:4px solid var(--info)}
+.badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:12px;font-weight:600}
+.badge-ok{background:#d4edda;color:#155724}.badge-ko{background:#f8d7da;color:#721c24}
+hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
+.csv-preview-box{background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:10px;margin-top:10px;max-height:200px;overflow-y:auto;font-size:12px}
+#pdf-block-msg{padding:10px;border-radius:8px;font-size:13px;margin:8px 0;text-align:center}
+</style>
+</head>
+<body>
+<div id="step-auth" class="card">
+<div class="header-logo"><div class="logo-company">SVARODINA<span>&amp; CO</span></div>
+<div class="subtitle">Inspection</div></div>
+<h3 id="auth-title" style="text-align:center">Connexion</h3>
+<label>Email :</label><input type="email" id="auth-email" placeholder="votre@email.com">
+<label>Mot de passe :</label><input type="password" id="auth-password" placeholder="******">
+<button class="btn btn-primary" id="btn-login" onclick="login()">Se connecter</button>
+<button class="btn btn-success hidden" id="btn-signup" onclick="signup()">Créer mon compte</button>
+<p style="text-align:center;margin-top:14px;font-size:13px;color:#3498db;cursor:pointer" onclick="toggleAuthMode()" id="auth-toggle-text">Pas encore de compte ? Créer un compte</p>
+<div class="footer-credit">Application créée par Svarodina &amp; CO</div>
+</div>
+<div id="step-scan" class="card hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<span id="user-email-display" style="font-size:12px;color:#666"></span>
+<button onclick="logout()" style="padding:5px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button>
+</div>
+<div class="header-logo"><div class="logo-cff-bar">SBB CFF FFS</div><div class="subtitle">Inspection</div></div>
+<h2 style="margin:8px 0 10px;font-size:17px">Sélection du Site</h2>
+<select id="site-select" onchange="loadSiteData()"><option value="">-- Choisir un site --</option></select>
+<button class="btn btn-secondary" onclick="showNewSiteForm()">➕ Ajouter un site</button>
+<div id="site-dashboard" class="hidden">
+<hr>
+<div class="stats-grid">
+<div class="stat-box"><div style="font-size:11px">Contrôlés / Total</div><div id="stat-progress" class="stat-number">0/0</div></div>
+<div class="stat-box"><div style="font-size:11px">Contrôles</div><div id="stat-total" class="stat-number">0</div></div>
+<div class="stat-box" style="color:var(--success)"><div style="font-size:11px">Conformes</div><div id="stat-conforme" class="stat-number">0</div></div>
+<div class="stat-box" style="color:var(--primary)"><div style="font-size:11px">Défauts</div><div id="stat-defauts" class="stat-number">0</div></div>
+</div>
+<p id="pdf-block-msg" class="hidden"></p>
+<h3 style="margin:12px 0 6px;font-size:15px">Scanner QR</h3>
+<div id="reader"></div>
+<label style="font-weight:600;font-size:14px;margin-top:12px;display:block">Importer CSV extincteurs</label>
+<p style="font-size:12px;color:#666">Format : qrcode;emplacement;type</p>
+<input type="file" id="csv-file" accept=".csv,.txt" onchange="previewCSV(event)">
+<div id="csv-preview-section" class="hidden">
+<p id="csv-count-label" style="font-size:13px;font-weight:600"></p>
+<div class="csv-preview-box"><table><thead><tr><th>QR</th><th>Empl.</th><th>Type</th></tr></thead><tbody id="csv-preview-body"></tbody></table></div>
+<button class="btn btn-success" id="btn-validate-csv" onclick="validateAndImportCSV()">✅ Valider et intégrer</button>
+<button class="btn btn-secondary" onclick="cancelCSVPreview()">Annuler</button>
+</div>
+<hr>
+<button class="btn btn-info" onclick="exportToCSV()">📊 Export Excel</button>
+<button class="btn btn-primary" onclick="generatePDFReport()">📄 Rapport PDF</button>
+</div>
+<div class="footer-credit">Application créée par Svarodina &amp; CO</div>
+</div>
+<div id="step-new-site" class="card hidden">
+<h2>Nouveau Site</h2>
+<input type="text" id="new-site-name" placeholder="Nom du site">
+<button class="btn btn-success" onclick="createSite()">Créer</button>
+<button class="btn btn-secondary" onclick="showStep('step-scan')">Annuler</button>
+</div>
+<div id="step-choice" class="card hidden">
+<h2 style="margin-top:0">Fiche Extincteur</h2>
+<div id="extincteur-details"></div>
+<button class="btn btn-success" onclick="saveControl('CONFORME')">✅ CONFORME</button>
+<button class="btn btn-danger" onclick="showDefects()">⚠️ NON CONFORME</button>
+<button class="btn btn-secondary" onclick="resetApp()">↩ Rescanner</button>
+</div>
+<div id="step-defects" class="card hidden">
+<h2 style="margin-top:0">Défauts</h2>
+<div class="checkbox-group">
+<label class="checkbox-label"><input type="checkbox" name="defect" value="Plomb/Scellé manquant"> Plombage manquant</label>
+<label class="checkbox-label"><input type="checkbox" name="defect" value="Goupille manquante"> Goupille manquante</label>
+<label class="checkbox-label"><input type="checkbox" name="defect" value="Manomètre hors zone"> Manomètre hors zone</label>
+<label class="checkbox-label"><input type="checkbox" name="defect" value="Flexible abîmé"> Flexible abîmé</label>
+<label class="checkbox-label"><input type="checkbox" name="defect" value="Corrosion"> Corrosion</label>
+<label class="checkbox-label"><input type="checkbox" name="defect" value="Accès obstrué"> Accès obstrué</label>
+<label class="checkbox-label"><input type="checkbox" name="defect" value="Étiquette illisible"> Étiquette illisible</label>
+<label class="checkbox-label"><input type="checkbox" name="defect" value="Autre"> Autre</label>
+</div>
+<label style="font-weight:600">Note :</label>
+<textarea id="defect-note" placeholder="Observation..."></textarea>
+<button class="btn btn-danger" onclick="saveControl('NON CONFORME')">💾 Enregistrer</button>
+<button class="btn btn-secondary" onclick="resetApp()">Annuler</button>
+</div>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import{getFirestore,collection,addDoc,getDocs,query,where}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyAbRHQOMAHVRybBxOgKj6Rl9jRgo-7Lk44",authDomain:"extincteur-check.firebaseapp.com",projectId:"extincteur-check",storageBucket:"extincteur-check.firebasestorage.app",messagingSenderId:"169428808632",appId:"1:169428808632:web:c862dec61a9ff01ed6954d",measurementId:"G-1MGG4D4PBS"};
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+let currentUser=null,currentSiteId=null,currentSiteName="",html5QrcodeScanner=null,currentExtincteur=null,isSignUpMode=false,fetchedControles=[],pendingCSVData=[],siteExtincteurs=[],controlledQrcodes=new Set();
+window.toggleAuthMode=()=>{isSignUpMode=!isSignUpMode;document.getElementById("auth-title").innerText=isSignUpMode?"Créer un compte":"Connexion";document.getElementById("btn-login").classList.toggle("hidden",isSignUpMode);document.getElementById("btn-signup").classList.toggle("hidden",!isSignUpMode);document.getElementById("auth-toggle-text").innerText=isSignUpMode?"Déjà un compte ? Connexion":"Pas encore de compte ? Créer un compte"};
+window.signup=()=>{const e=document.getElementById("auth-email").value,p=document.getElementById("auth-password").value;if(!e||!p)return alert("Email et mot de passe requis.");createUserWithEmailAndPassword(auth,e,p).then(()=>alert("Compte créé !")).catch(x=>alert("Erreur : "+x.message))};
+window.login=()=>{const e=document.getElementById("auth-email").value,p=document.getElementById("auth-password").value;if(!e||!p)return alert("Email et mot de passe requis.");signInWithEmailAndPassword(auth,e,p).catch(x=>alert("Erreur : "+x.message))};
+window.logout=()=>signOut(auth);
+onAuthStateChanged(auth,u=>{currentUser=u;if(u){document.getElementById("user-email-display").innerText=u.email;showStep("step-scan");loadUserSites()}else showStep("step-auth")});
+async function loadUserSites(){const s=document.getElementById("site-select");s.innerHTML='<option value="">-- Choisir un site --</option>';(await getDocs(query(collection(db,"sites"),where("userId","==",currentUser.uid)))).forEach(d=>{s.innerHTML+=`<option value="${d.id}">${d.data().name}</option>`})};
+window.showNewSiteForm=()=>showStep("step-new-site");
+window.createSite=async()=>{const n=document.getElementById("new-site-name").value.trim();if(!n)return alert("Nom requis.");await addDoc(collection(db,"sites"),{name:n,userId:currentUser.uid,createdAt:new Date()});alert("Site créé !");document.getElementById("new-site-name").value="";showStep("step-scan");loadUserSites()};
+window.loadSiteData=async()=>{currentSiteId=document.getElementById("site-select").value;const d=document.getElementById("site-dashboard");if(currentSiteId){const s=document.getElementById("site-select");currentSiteName=s.options[s.selectedIndex].text;d.classList.remove("hidden");initScanner();await updateStatsAndData();cancelCSVPreview()}else{d.classList.add("hidden");currentSiteName=""}};
+async function updateStatsAndData(){const es=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));siteExtincteurs=[];es.forEach(d=>siteExtincteurs.push(d.data()));const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));fetchedControles=[];let t=0,c=0,df=0;controlledQrcodes=new Set();snap.forEach(doc=>{const d=doc.data();fetchedControles.push(d);t++;if(d.statut==="CONFORME")c++;else df++;if(d.qrcode)controlledQrcodes.add(d.qrcode)});fetchedControles.sort((a,b)=>(b.date||"").localeCompare(a.date||""));const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;document.getElementById("stat-progress").innerText=nE?nO+"/"+nE:"0/0";document.getElementById("stat-total").innerText=t;document.getElementById("stat-conforme").innerText=c;document.getElementById("stat-defauts").innerText=df;const msg=document.getElementById("pdf-block-msg");if(nE>0&&nO<nE){msg.textContent="⚠️ PDF bloqué : "+nO+"/"+nE+" — "+(nE-nO)+" manquant(s)";msg.style.background="#fff3cd";msg.style.color="#856404";msg.classList.remove("hidden")}else if(nE>0){msg.textContent="✅ "+nO+"/"+nE+" — PDF disponible";msg.style.background="#d4edda";msg.style.color="#155724";msg.classList.remove("hidden")}else msg.classList.add("hidden")};
+function initScanner(){if(html5QrcodeScanner){try{html5QrcodeScanner.clear()}catch(e){}}html5QrcodeScanner=new Html5QrcodeScanner("reader",{fps:10,qrbox:250},false);html5QrcodeScanner.render(onScanSuccess)};
+async function onScanSuccess(txt){try{html5QrcodeScanner.clear()}catch(e){}const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId),where("qrcode","==",txt.trim())));if(!snap.empty){currentExtincteur=snap.docs[0].data();document.getElementById("extincteur-details").innerHTML=`<p><b>QR :</b> ${currentExtincteur.qrcode}</p><p><b>Emplacement :</b> ${currentExtincteur.emplacement||"N/C"}</p><p><b>Type :</b> ${currentExtincteur.type||"N/C"}</p><p><span class="badge badge-ok">Enregistré</span></p>`}else{currentExtincteur={qrcode:txt.trim(),emplacement:"Inconnu",type:"Nouveau"};document.getElementById("extincteur-details").innerHTML=`<p><b>QR :</b> ${txt.trim()}</p><p><span class="badge badge-ko">Non enregistré</span></p>`}showStep("step-choice")};
+window.saveControl=async statut=>{let details=[],note="";if(statut==="NON CONFORME"){document.querySelectorAll('input[name="defect"]:checked').forEach(cb=>details.push(cb.value));note=(document.getElementById("defect-note")?.value||"").trim();if(!details.length&&!note)return alert("Sélectionnez un défaut ou une note.")}let loc={lat:null,lng:null};if(navigator.geolocation){try{const pos=await new Promise((r,j)=>navigator.geolocation.getCurrentPosition(r,j,{timeout:4000}));loc.lat=pos.coords.latitude;loc.lng=pos.coords.longitude}catch(e){}}const now=new Date();await addDoc(collection(db,"controles"),{siteId:currentSiteId,siteName:currentSiteName,userId:currentUser.uid,userEmail:currentUser.email,technicien:currentUser.email,qrcode:currentExtincteur.qrcode,emplacement:currentExtincteur.emplacement||"N/C",type:currentExtincteur.type||"N/C",statut,details:details.join(" | ")||"RAS",note:note||"",latitude:loc.lat,longitude:loc.lng,date:now.toLocaleString("fr-FR"),timestamp:now.getTime()});document.querySelectorAll('input[name="defect"]').forEach(cb=>cb.checked=false);if(document.getElementById("defect-note"))document.getElementById("defect-note").value="";alert("Contrôle enregistré !");resetApp()};
+window.previewCSV=ev=>{const f=ev.target.files[0];if(!f)return;if(!currentSiteId){alert("Sélectionnez un site.");ev.target.value="";return}const r=new FileReader();r.onload=e=>{const text=e.target.result,lines=text.split(/\r?\n/),sep=text.includes(";")?";":",";pendingCSVData=[];let start=0;if(lines.length&&/qrcode|qr|emplacement|type/i.test(lines[0]))start=1;for(let i=start;i<lines.length;i++){if(!lines[i].trim())continue;const cols=lines[i].split(sep).map(c=>c.replace(/^"|"$/g,"").trim());if(cols[0])pendingCSVData.push({qrcode:cols[0],emplacement:cols[1]||"",type:cols[2]||""})}if(!pendingCSVData.length){alert("Aucun extincteur.");cancelCSVPreview();return}const tb=document.getElementById("csv-preview-body");tb.innerHTML="";pendingCSVData.forEach(row=>{tb.innerHTML+=`<tr><td>${row.qrcode}</td><td>${row.emplacement||"—"}</td><td>${row.type||"—"}</td></tr>`});document.getElementById("csv-count-label").innerText=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';document.getElementById("csv-preview-section").classList.remove("hidden")};r.readAsText(f,"UTF-8")};
+window.validateAndImportCSV=async()=>{if(!pendingCSVData.length||!currentSiteId)return alert("Aucune donnée.");const btn=document.getElementById("btn-validate-csv");btn.disabled=true;btn.innerText="Import…";try{let n=0;for(const row of pendingCSVData){await addDoc(collection(db,"extincteurs"),{siteId:currentSiteId,qrcode:row.qrcode,emplacement:row.emplacement,type:row.type});n++}alert("✅ "+n+" extincteur(s) intégré(s).");cancelCSVPreview();await updateStatsAndData()}catch(e){alert("Erreur : "+e.message);btn.disabled=false;btn.innerText="✅ Valider et intégrer"}};
+window.cancelCSVPreview=()=>{pendingCSVData=[];document.getElementById("csv-preview-section").classList.add("hidden");document.getElementById("csv-preview-body").innerHTML="";document.getElementById("csv-file").value="";const b=document.getElementById("btn-validate-csv");if(b){b.disabled=false;b.innerText="✅ Valider et intégrer"}};
+window.exportToCSV=()=>{if(!fetchedControles.length)return alert("Aucune donnée.");const data=fetchedControles.map(c=>({Date:c.date,Site:c.siteName||currentSiteName,Tech:c.userEmail,QR:c.qrcode,Empl:c.emplacement,Type:c.type||"",Statut:c.statut,Defauts:c.details,Note:c.note||""}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Controles");XLSX.writeFile(wb,"Rapport_"+(currentSiteName||"site")+"_"+new Date().toISOString().slice(0,10)+".xlsx")};
+window.generatePDFReport=async()=>{if(!fetchedControles.length)return alert("Aucune donnée.");const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;if(nE===0)return alert("Aucun extincteur. Importez le CSV.");if(nO<nE){const miss=siteExtincteurs.filter(e=>!controlledQrcodes.has(e.qrcode)).slice(0,8).map(e=>"• "+e.qrcode+" ("+(e.emplacement||"N/C")+")").join("\n");return alert("❌ PDF bloqué : "+(nE-nO)+" non contrôlé(s).\nProgression : "+nO+"/"+nE+"\n\n"+miss)}const{jsPDF}=window.jspdf;const doc=new jsPDF();const pw=doc.internal.pageSize.getWidth(),m=14,now=new Date(),tech=currentUser?.email||"N/C",total=fetchedControles.length,conf=fetchedControles.filter(c=>c.statut==="CONFORME").length;doc.setFillColor(227,6,19);doc.rect(0,0,pw,28,"F");doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont("helvetica","bold");doc.text("SBB CFF FFS",m,12);doc.setFontSize(9);doc.setFont("helvetica","normal");doc.text("Inspection — Inspect360",m,20);doc.text(now.toLocaleString("fr-FR"),pw-m,12,{align:"right"});let y=36;doc.setTextColor(40,40,40);doc.setFontSize(10);["Site : "+(currentSiteName||"N/C"),"Technicien : "+tech,"Extincteurs contrôlés : "+nO+"/"+nE,"Contrôles : "+total+" | OK : "+conf+" | Défauts : "+(total-conf)].forEach(l=>{doc.text(l,m,y);y+=6});y+=4;doc.setDrawColor(227,6,19);doc.line(m,y,pw-m,y);y+=8;doc.setFont("helvetica","bold");doc.text("Détail",m,y);y+=8;doc.setFont("helvetica","normal");doc.setFontSize(8);fetchedControles.forEach((c,i)=>{if(y>270){doc.addPage();y=20}const ok=c.statut==="CONFORME";doc.setTextColor(ok?39:192,ok?174:57,ok?96:43);doc.text((i+1)+". "+c.statut+" | QR: "+c.qrcode+" | "+(c.emplacement||"N/C"),m,y);y+=4;doc.setTextColor(80,80,80);doc.text("   "+(c.date||"")+" | "+(c.details||""),m,y);y+=4;if(c.note){doc.text("   Note: "+c.note,m,y);y+=4}y+=2});const pc=doc.internal.getNumberOfPages();for(let i=1;i<=pc;i++){doc.setPage(i);doc.setFontSize(7);doc.setTextColor(140,140,140);doc.text("SBB CFF FFS | "+nO+"/"+nE+" | p."+i+"/"+pc,pw/2,290,{align:"center"});doc.text("Application créée par Svarodina & CO",m,290)}doc.save("Rapport_CFF_"+(currentSiteName||"site").replace(/\s+/g,"_")+"_"+now.toISOString().slice(0,10)+".pdf")};
+window.showDefects=()=>showStep("step-defects");
+window.resetApp=()=>{showStep("step-scan");if(currentSiteId)loadSiteData()};
+function showStep(id){document.querySelectorAll(".card").forEach(c=>c.classList.add("hidden"));document.getElementById(id).classList.remove("hidden")}
+</script>
+</body>
+</html>

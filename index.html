@@ -59,6 +59,8 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
 <select id="site-select" onchange="loadSiteData()"><option value="">-- Choisir un site --</option></select>
 <button class="btn btn-secondary" onclick="showNewSiteForm()">➕ Ajouter un site</button>
 <div id="site-dashboard" class="hidden">
+<label style="font-weight:600;font-size:13px">Technicien (nom et prénom) :</label>
+<input type="text" id="tech-name" placeholder="Nom Prénom" style="margin-bottom:8px">
 <hr>
 <div class="stats-grid">
 <div class="stat-box"><div style="font-size:11px">Contrôlés / Total</div><div id="stat-progress" class="stat-number">0/0</div></div>
@@ -134,12 +136,12 @@ window.toggleAuthMode=()=>{isSignUpMode=!isSignUpMode;document.getElementById("a
 window.signup=()=>{const e=document.getElementById("auth-email").value,p=document.getElementById("auth-password").value;if(!e||!p)return alert("Email et mot de passe requis.");createUserWithEmailAndPassword(auth,e,p).then(()=>alert("Compte créé !")).catch(x=>alert("Erreur : "+x.message))};
 window.login=()=>{const e=document.getElementById("auth-email").value,p=document.getElementById("auth-password").value;if(!e||!p)return alert("Email et mot de passe requis.");signInWithEmailAndPassword(auth,e,p).catch(x=>alert("Erreur : "+x.message))};
 window.logout=()=>signOut(auth);
-onAuthStateChanged(auth,u=>{currentUser=u;if(u){document.getElementById("user-email-display").innerText=u.email;showStep("step-scan");loadUserSites()}else showStep("step-auth")});
+onAuthStateChanged(auth,u=>{currentUser=u;if(u){document.getElementById("user-email-display").innerText=u.email;showStep("step-scan");loadUserSites();try{const tn=localStorage.getItem("inspect360_tech_name");if(tn){const el=document.getElementById("tech-name");if(el)el.value=tn}}catch(e){}}else showStep("step-auth")});
 async function loadUserSites(){const s=document.getElementById("site-select");s.innerHTML='<option value="">-- Choisir un site --</option>';(await getDocs(query(collection(db,"sites"),where("userId","==",currentUser.uid)))).forEach(d=>{s.innerHTML+=`<option value="${d.id}">${d.data().name}</option>`})};
 window.showNewSiteForm=()=>showStep("step-new-site");
 window.createSite=async()=>{const n=document.getElementById("new-site-name").value.trim();if(!n)return alert("Nom requis.");await addDoc(collection(db,"sites"),{name:n,userId:currentUser.uid,createdAt:new Date()});alert("Site créé !");document.getElementById("new-site-name").value="";showStep("step-scan");loadUserSites()};
 window.loadSiteData=async()=>{currentSiteId=document.getElementById("site-select").value;const d=document.getElementById("site-dashboard");if(currentSiteId){const s=document.getElementById("site-select");currentSiteName=s.options[s.selectedIndex].text;d.classList.remove("hidden");initScanner();await updateStatsAndData();cancelCSVPreview()}else{d.classList.add("hidden");currentSiteName=""}};
-async function updateStatsAndData(){const es=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));siteExtincteurs=[];es.forEach(d=>siteExtincteurs.push(d.data()));const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));fetchedControles=[];let t=0,c=0,df=0;controlledQrcodes=new Set();snap.forEach(doc=>{const d=doc.data();fetchedControles.push(d);t++;if(d.statut==="CONFORME")c++;else df++;if(d.qrcode)controlledQrcodes.add(d.qrcode)});fetchedControles.sort((a,b)=>(b.date||"").localeCompare(a.date||""));const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;document.getElementById("stat-progress").innerText=nE?nO+"/"+nE:"0/0";document.getElementById("stat-total").innerText=t;document.getElementById("stat-conforme").innerText=c;document.getElementById("stat-defauts").innerText=df;const msg=document.getElementById("pdf-block-msg");if(nE>0&&nO<nE){msg.textContent="📋 Progression : "+nO+"/"+nE+" contrôlés — "+(nE-nO)+" restant(s) — PDF disponible";msg.style.background="#e8f4fd";msg.style.color="#0c5460";msg.classList.remove("hidden")}else if(nE>0){msg.innerHTML="✅ "+nO+"/"+nE+" — Tous contrôlés — PDF disponible<br><small>Période terminée → « Reset période » pour le mois suivant</small>";msg.style.background="#d4edda";msg.style.color="#155724";msg.classList.remove("hidden")}else msg.classList.add("hidden")};
+async function updateStatsAndData(){const es=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));siteExtincteurs=[];es.forEach(d=>siteExtincteurs.push(d.data()));const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));fetchedControles=[];let t=0,c=0,df=0;controlledQrcodes=new Set();snap.forEach(doc=>{const d=doc.data();fetchedControles.push(d);t++;if(d.statut==="CONFORME")c++;else df++;if(d.qrcode)controlledQrcodes.add(d.qrcode)});fetchedControles.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;document.getElementById("stat-progress").innerText=nE?nO+"/"+nE:"0/0";document.getElementById("stat-total").innerText=t;document.getElementById("stat-conforme").innerText=c;document.getElementById("stat-defauts").innerText=df;const msg=document.getElementById("pdf-block-msg");if(nE>0&&nO<nE){msg.textContent="📋 Progression : "+nO+"/"+nE+" contrôlés — "+(nE-nO)+" restant(s) — PDF disponible";msg.style.background="#e8f4fd";msg.style.color="#0c5460";msg.classList.remove("hidden")}else if(nE>0){msg.innerHTML="✅ "+nO+"/"+nE+" — Tous contrôlés — PDF disponible<br><small>Période terminée → « Reset période » pour le mois suivant</small>";msg.style.background="#d4edda";msg.style.color="#155724";msg.classList.remove("hidden")}else msg.classList.add("hidden")};
 function initScanner(){if(html5QrcodeScanner){try{html5QrcodeScanner.clear()}catch(e){}}html5QrcodeScanner=new Html5QrcodeScanner("reader",{fps:10,qrbox:250},false);html5QrcodeScanner.render(onScanSuccess)};
 async function onScanSuccess(txt){
   try{html5QrcodeScanner.clear()}catch(e){}
@@ -177,11 +179,11 @@ async function onScanSuccess(txt){
   }
   showStep("step-choice");
 }
-window.saveControl=async statut=>{let details=[],note="";if(statut==="NON CONFORME"){document.querySelectorAll('input[name="defect"]:checked').forEach(cb=>details.push(cb.value));note=(document.getElementById("defect-note")?.value||"").trim();if(!details.length&&!note)return alert("Sélectionnez un défaut ou une note.")}const now=new Date();await addDoc(collection(db,"controles"),{siteId:currentSiteId,siteName:currentSiteName,userId:currentUser.uid,userEmail:currentUser.email,technicien:currentUser.email,qrcode:currentExtincteur.qrcode,emplacement:currentExtincteur.emplacement||"N/C",type:currentExtincteur.type||"N/C",statut,details:details.join(" | ")||"RAS",note:note||"",date:now.toLocaleString("fr-FR"),timestamp:now.getTime()});document.querySelectorAll('input[name="defect"]').forEach(cb=>cb.checked=false);if(document.getElementById("defect-note"))document.getElementById("defect-note").value="";alert("Contrôle enregistré !");window.goBack()};
+window.saveControl=async statut=>{let details=[],note="";if(statut==="NON CONFORME"){document.querySelectorAll('input[name="defect"]:checked').forEach(cb=>details.push(cb.value));note=(document.getElementById("defect-note")?.value||"").trim();if(!details.length&&!note)return alert("Sélectionnez un défaut ou une note.")}const techName=(document.getElementById("tech-name")?.value||"").trim()||currentUser.email;const now=new Date();await addDoc(collection(db,"controles"),{siteId:currentSiteId,siteName:currentSiteName,userId:currentUser.uid,userEmail:currentUser.email,technicien:techName,qrcode:currentExtincteur.qrcode,emplacement:currentExtincteur.emplacement||"N/C",type:currentExtincteur.type||"N/C",statut,details:details.join(" | ")||"RAS",note:note||"",timestamp:now.getTime()});try{localStorage.setItem("inspect360_tech_name",techName)}catch(e){}document.querySelectorAll('input[name="defect"]').forEach(cb=>cb.checked=false);if(document.getElementById("defect-note"))document.getElementById("defect-note").value="";alert("Contrôle enregistré !");window.goBack()};
 window.previewCSV=ev=>{const f=ev.target.files[0];if(!f)return;if(!currentSiteId){alert("Sélectionnez un site.");ev.target.value="";return}const r=new FileReader();r.onload=e=>{const text=e.target.result,lines=text.split(/\r?\n/),sep=text.includes(";")?";":",";pendingCSVData=[];let start=0;if(lines.length&&/qrcode|qr|giai|emplacement|type/i.test(lines[0]))start=1;for(let i=start;i<lines.length;i++){if(!lines[i].trim())continue;const cols=lines[i].split(sep).map(c=>c.replace(/^"|"$/g,"").trim());if(cols[0])pendingCSVData.push({qrcode:cols[0],emplacement:cols[1]||"",type:cols[2]||""})}if(!pendingCSVData.length){alert("Aucun extincteur.");cancelCSVPreview();return}const tb=document.getElementById("csv-preview-body");tb.innerHTML="";pendingCSVData.forEach(row=>{tb.innerHTML+=`<tr><td>${row.qrcode}</td><td>${row.emplacement||"—"}</td><td>${row.type||"—"}</td></tr>`});document.getElementById("csv-count-label").innerText=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';document.getElementById("csv-preview-section").classList.remove("hidden")};r.readAsText(f,"UTF-8")};
 window.validateAndImportCSV=async()=>{if(!pendingCSVData.length||!currentSiteId)return alert("Aucune donnée.");const btn=document.getElementById("btn-validate-csv");btn.disabled=true;btn.innerText="Import…";try{let n=0;for(const row of pendingCSVData){await addDoc(collection(db,"extincteurs"),{siteId:currentSiteId,qrcode:row.qrcode,emplacement:row.emplacement,type:row.type});n++}alert("✅ "+n+" extincteur(s) intégré(s).");cancelCSVPreview();await updateStatsAndData()}catch(e){alert("Erreur : "+e.message);btn.disabled=false;btn.innerText="✅ Valider et intégrer"}};
 window.cancelCSVPreview=()=>{pendingCSVData=[];document.getElementById("csv-preview-section").classList.add("hidden");document.getElementById("csv-preview-body").innerHTML="";document.getElementById("csv-file").value="";const b=document.getElementById("btn-validate-csv");if(b){b.disabled=false;b.innerText="✅ Valider et intégrer"}};
-window.exportToCSV=()=>{if(!fetchedControles.length)return alert("Aucune donnée.");const data=fetchedControles.map(c=>({Date:c.date,Site:c.siteName||currentSiteName,Tech:c.userEmail,QR:c.qrcode,Empl:c.emplacement,Type:c.type||"",Statut:c.statut,Defauts:c.details,Note:c.note||""}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Controles");XLSX.writeFile(wb,"Rapport_"+(currentSiteName||"site")+"_"+new Date().toISOString().slice(0,10)+".xlsx")};
+window.exportToCSV=()=>{if(!fetchedControles.length)return alert("Aucune donnée.");const data=fetchedControles.map(c=>({Site:c.siteName||currentSiteName,Technicien:c.technicien||c.userEmail,Email:c.userEmail,QR:c.qrcode,Empl:c.emplacement,Type:c.type||"",Statut:c.statut,Defauts:c.details,Note:c.note||""}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Controles");XLSX.writeFile(wb,"Rapport_"+(currentSiteName||"site")+"_"+new Date().toISOString().slice(0,10)+".xlsx")};
 window.generatePDFReport=async()=>{
   if(!currentSiteId)return alert("Sélectionnez un site.");
   await updateStatsAndData();
@@ -190,21 +192,30 @@ window.generatePDFReport=async()=>{
   const nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
-  const pw=doc.internal.pageSize.getWidth(),m=14,now=new Date(),tech=currentUser?.email||"N/C";
+  const pw=doc.internal.pageSize.getWidth(),m=14;
+  const now=new Date();
+  const dateStr=now.toLocaleDateString("fr-FR");
+  const techName=(document.getElementById("tech-name")?.value||"").trim()||"N/C";
+  const techEmail=currentUser?.email||"N/C";
   const total=fetchedControles.length,conf=fetchedControles.filter(c=>c.statut==="CONFORME").length;
   doc.setFillColor(227,6,19);doc.rect(0,0,pw,28,"F");
-  doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont("helvetica","bold");
-  doc.text("SBB CFF FFS",m,12);
-  doc.setFontSize(9);doc.setFont("helvetica","normal");
-  doc.text("Inspection — Inspect360",m,20);
-  doc.text(now.toLocaleString("fr-FR"),pw-m,12,{align:"right"});
-  let y=36;
-  doc.setTextColor(40,40,40);doc.setFontSize(10);
-  ["Site : "+(currentSiteName||"N/C"),"Technicien : "+tech,
-   "Progression : "+nO+"/"+nE+" contrôlés ("+Math.round(nO/nE*100)+"%) — "+(nE-nO)+" restant(s)",
-   "Contrôles enregistrés : "+total+" | Conformes : "+conf+" | Défauts : "+(total-conf)
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(14);doc.setFont("helvetica","bold");
+  doc.text("SBB CFF FFS",m,17);
+  doc.setFontSize(12);doc.setFont("helvetica","bold");
+  doc.text("Inspection",pw/2,17,{align:"center"});
+  doc.setFontSize(10);doc.setFont("helvetica","normal");
+  doc.text(dateStr,pw-m,17,{align:"right"});
+  let y=38;
+  doc.setTextColor(40,40,40);doc.setFontSize(10);doc.setFont("helvetica","normal");
+  [
+    "1. Site : "+(currentSiteName||"N/C"),
+    "2. Technicien : "+techName,
+    "3. E-mail : "+techEmail,
+    "4. Progression : "+nO+"/"+nE+" contrôlés ("+Math.round(nO/nE*100)+"%) — "+(nE-nO)+" restant(s)",
+    "   Contrôles enregistrés : "+total+" | Conformes : "+conf+" | Défauts : "+(total-conf)
   ].forEach(l=>{doc.text(l,m,y);y+=6});
-  y+=4;doc.setDrawColor(227,6,19);doc.line(m,y,pw-m,y);y+=8;
+  y+=3;doc.setDrawColor(227,6,19);doc.line(m,y,pw-m,y);y+=8;
   doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(39,174,96);
   doc.text("Contrôles effectués ("+nO+")",m,y);y+=7;
   doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(40,40,40);
@@ -220,7 +231,6 @@ window.generatePDFReport=async()=>{
       doc.text((i+1)+". ["+st+"] GIAI: "+e.qrcode+" | "+(e.emplacement||"N/C")+" | "+(e.type||""),m,y);y+=4;
       doc.setTextColor(80,80,80);
       if(ctrl){
-        doc.text("   Date: "+(ctrl.date||"")+" | Tech: "+(ctrl.userEmail||""),m,y);y+=3.5;
         if(ctrl.details&&ctrl.details!=="RAS"){doc.text("   Défauts: "+ctrl.details,m,y);y+=3.5}
         if(ctrl.note){doc.text("   Note: "+ctrl.note,m,y);y+=3.5}
       }

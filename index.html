@@ -91,20 +91,20 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
 <h2 style="margin-top:0">Liste extincteurs</h2>
 <p id="ext-list-summary" style="font-size:13px;color:#555"></p>
 <div id="ext-list-box" style="max-height:360px;overflow-y:auto;font-size:13px"></div>
-<button class="btn btn-secondary" onclick="goBack()">↩ Retour</button>
+<button class="btn btn-secondary" onclick="window.goBack()">↩ Retour</button>
 </div>
 <div id="step-new-site" class="card hidden">
 <h2>Nouveau Site</h2>
 <input type="text" id="new-site-name" placeholder="Nom du site">
 <button class="btn btn-success" onclick="createSite()">Créer</button>
-<button class="btn btn-secondary" onclick="goBack()">Annuler</button>
+<button class="btn btn-secondary" onclick="window.goBack()">↩ Retour</button>
 </div>
 <div id="step-choice" class="card hidden">
 <h2 style="margin-top:0">Fiche Extincteur</h2>
 <div id="extincteur-details"></div>
 <button class="btn btn-success" onclick="saveControl('CONFORME')">✅ CONFORME</button>
 <button class="btn btn-danger" onclick="showDefects()">⚠️ NON CONFORME</button>
-<button class="btn btn-secondary" onclick="resetApp()">↩ Rescanner</button>
+<button class="btn btn-secondary" onclick="window.goBack()">↩ Retour au scan</button>
 </div>
 <div id="step-defects" class="card hidden">
 <h2 style="margin-top:0">Défauts</h2>
@@ -121,7 +121,7 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
 <label style="font-weight:600">Note :</label>
 <textarea id="defect-note" placeholder="Observation..."></textarea>
 <button class="btn btn-danger" onclick="saveControl('NON CONFORME')">💾 Enregistrer</button>
-<button class="btn btn-secondary" onclick="resetApp()">Annuler</button>
+<button class="btn btn-secondary" onclick="window.goBack()">↩ Retour</button>
 </div>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -177,7 +177,7 @@ async function onScanSuccess(txt){
   }
   showStep("step-choice");
 }
-window.saveControl=async statut=>{let details=[],note="";if(statut==="NON CONFORME"){document.querySelectorAll('input[name="defect"]:checked').forEach(cb=>details.push(cb.value));note=(document.getElementById("defect-note")?.value||"").trim();if(!details.length&&!note)return alert("Sélectionnez un défaut ou une note.")}let loc={lat:null,lng:null};if(navigator.geolocation){try{const pos=await new Promise((r,j)=>navigator.geolocation.getCurrentPosition(r,j,{timeout:4000}));loc.lat=pos.coords.latitude;loc.lng=pos.coords.longitude}catch(e){}}const now=new Date();await addDoc(collection(db,"controles"),{siteId:currentSiteId,siteName:currentSiteName,userId:currentUser.uid,userEmail:currentUser.email,technicien:currentUser.email,qrcode:currentExtincteur.qrcode,emplacement:currentExtincteur.emplacement||"N/C",type:currentExtincteur.type||"N/C",statut,details:details.join(" | ")||"RAS",note:note||"",latitude:loc.lat,longitude:loc.lng,date:now.toLocaleString("fr-FR"),timestamp:now.getTime()});document.querySelectorAll('input[name="defect"]').forEach(cb=>cb.checked=false);if(document.getElementById("defect-note"))document.getElementById("defect-note").value="";alert("Contrôle enregistré !");resetApp()};
+window.saveControl=async statut=>{let details=[],note="";if(statut==="NON CONFORME"){document.querySelectorAll('input[name="defect"]:checked').forEach(cb=>details.push(cb.value));note=(document.getElementById("defect-note")?.value||"").trim();if(!details.length&&!note)return alert("Sélectionnez un défaut ou une note.")}let loc={lat:null,lng:null};if(navigator.geolocation){try{const pos=await new Promise((r,j)=>navigator.geolocation.getCurrentPosition(r,j,{timeout:4000}));loc.lat=pos.coords.latitude;loc.lng=pos.coords.longitude}catch(e){}}const now=new Date();await addDoc(collection(db,"controles"),{siteId:currentSiteId,siteName:currentSiteName,userId:currentUser.uid,userEmail:currentUser.email,technicien:currentUser.email,qrcode:currentExtincteur.qrcode,emplacement:currentExtincteur.emplacement||"N/C",type:currentExtincteur.type||"N/C",statut,details:details.join(" | ")||"RAS",note:note||"",latitude:loc.lat,longitude:loc.lng,date:now.toLocaleString("fr-FR"),timestamp:now.getTime()});document.querySelectorAll('input[name="defect"]').forEach(cb=>cb.checked=false);if(document.getElementById("defect-note"))document.getElementById("defect-note").value="";alert("Contrôle enregistré !");window.goBack()};
 window.previewCSV=ev=>{const f=ev.target.files[0];if(!f)return;if(!currentSiteId){alert("Sélectionnez un site.");ev.target.value="";return}const r=new FileReader();r.onload=e=>{const text=e.target.result,lines=text.split(/\r?\n/),sep=text.includes(";")?";":",";pendingCSVData=[];let start=0;if(lines.length&&/qrcode|qr|giai|emplacement|type/i.test(lines[0]))start=1;for(let i=start;i<lines.length;i++){if(!lines[i].trim())continue;const cols=lines[i].split(sep).map(c=>c.replace(/^"|"$/g,"").trim());if(cols[0])pendingCSVData.push({qrcode:cols[0],emplacement:cols[1]||"",type:cols[2]||""})}if(!pendingCSVData.length){alert("Aucun extincteur.");cancelCSVPreview();return}const tb=document.getElementById("csv-preview-body");tb.innerHTML="";pendingCSVData.forEach(row=>{tb.innerHTML+=`<tr><td>${row.qrcode}</td><td>${row.emplacement||"—"}</td><td>${row.type||"—"}</td></tr>`});document.getElementById("csv-count-label").innerText=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';document.getElementById("csv-preview-section").classList.remove("hidden")};r.readAsText(f,"UTF-8")};
 window.validateAndImportCSV=async()=>{if(!pendingCSVData.length||!currentSiteId)return alert("Aucune donnée.");const btn=document.getElementById("btn-validate-csv");btn.disabled=true;btn.innerText="Import…";try{let n=0;for(const row of pendingCSVData){await addDoc(collection(db,"extincteurs"),{siteId:currentSiteId,qrcode:row.qrcode,emplacement:row.emplacement,type:row.type});n++}alert("✅ "+n+" extincteur(s) intégré(s).");cancelCSVPreview();await updateStatsAndData()}catch(e){alert("Erreur : "+e.message);btn.disabled=false;btn.innerText="✅ Valider et intégrer"}};
 window.cancelCSVPreview=()=>{pendingCSVData=[];document.getElementById("csv-preview-section").classList.add("hidden");document.getElementById("csv-preview-body").innerHTML="";document.getElementById("csv-file").value="";const b=document.getElementById("btn-validate-csv");if(b){b.disabled=false;b.innerText="✅ Valider et intégrer"}};
@@ -253,17 +253,30 @@ window.showExtincteurList=async()=>{if(!currentSiteId)return alert("Sélectionne
 window.resetPeriod=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;const nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;const msg="RESET PÉRIODE / NOUVEAU MOIS\n\nSite : "+currentSiteName+"\nProgression : "+nO+"/"+nE+"\nContrôles : "+fetchedControles.length+"\n\nSupprime TOUS les contrôles de ce site.\nLes extincteurs importés sont conservés.\n\nConfirmer ?";if(!confirm(msg))return;if(!confirm("Dernière confirmation : effacer "+fetchedControles.length+" contrôle(s) ?"))return;try{const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}alert("✅ Période réinitialisée.\n"+deleted+" contrôle(s) supprimé(s).\nProgression : 0/"+nE);await updateStatsAndData()}catch(e){alert("Erreur reset : "+e.message)}};
 window.deleteImportedExtincteurs=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;if(!nE)return alert("Aucun extincteur importé sur ce site.");if(!confirm("SUPPRIMER TOUTE la liste des extincteurs de ce site ?\n\nSite : "+currentSiteName+"\n"+nE+" extincteur(s) seront TOUS effacés d'un coup.\n\nConfirmer ?"))return;if(!confirm("Dernière confirmation : supprimer les "+nE+" extincteur(s) du site \""+currentSiteName+"\" ?"))return;try{const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}siteExtincteurs=[];alert("✅ Liste entièrement supprimée.\n"+deleted+" extincteur(s) effacés.\nVous pouvez réimporter un CSV propre.");await updateStatsAndData()}catch(e){alert("Erreur suppression : "+e.message)}};
 window.showDefects=()=>showStep("step-defects");
-window.goBack=async()=>{
+window.goBack=function(){
   showStep("step-scan");
   if(currentSiteId){
-    document.getElementById("site-dashboard").classList.remove("hidden");
-    try{if(html5QrcodeScanner)await html5QrcodeScanner.clear()}catch(e){}
-    html5QrcodeScanner=null;
-    setTimeout(()=>{try{initScanner()}catch(e){console.error(e)}},250);
-    await updateStatsAndData();
+    var dash=document.getElementById("site-dashboard");
+    if(dash)dash.classList.remove("hidden");
+    setTimeout(function(){
+      try{
+        if(html5QrcodeScanner){
+          html5QrcodeScanner.clear().catch(function(){}).finally(function(){
+            html5QrcodeScanner=null;
+            try{initScanner()}catch(e){console.error(e)}
+          });
+        } else {
+          try{initScanner()}catch(e){console.error(e)}
+        }
+      }catch(e){
+        html5QrcodeScanner=null;
+        try{initScanner()}catch(e2){}
+      }
+      updateStatsAndData().catch(function(){});
+    },100);
   }
 };
-window.resetApp=()=>{goBack()};
+window.resetApp=function(){window.goBack()};
 function showStep(id){
   document.querySelectorAll(".card").forEach(c=>c.classList.add("hidden"));
   const el=document.getElementById(id);

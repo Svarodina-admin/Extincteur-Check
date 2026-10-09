@@ -1,1 +1,428 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspect360 - Contrôle Incendie CFF</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root { --primary: #c0392b; --success: #27ae60; --bg: #f4f6f8; --card: #ffffff; --info: #2980b9; --dark: #2c3e50; --warning: #f39c12; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
+    body { background: var(--bg); color: #333; margin: 0; padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    .card { background: var(--card); border-radius: 14px; padding: 22px; width: 100%; max-width: 520px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 18px; }
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 15px; font-weight: 600; color: white; cursor: pointer; margin-top: 10px; transition: transform 0.1s, opacity 0.2s; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-success { background: var(--success); }
+    .btn-danger { background: var(--primary); }
+    .btn-secondary { background: #7f8c8d; }
+    .btn-primary { background: #3498db; }
+    .btn-info { background: var(--info); }
+    .hidden { display: none !important; }
+    input, select, textarea { width: 100%; padding: 11px; margin: 6px 0 12px 0; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 15px; }
+    textarea { min-height: 80px; resize: vertical; }
+    .checkbox-group { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+    .checkbox-label { display: flex; align-items: center; gap: 10px; font-size: 14px; background: #f1f3f5; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+    .checkbox-label:hover { background: #e9ecef; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 15px 0; }
+    .stat-box { background: #eef1f5; padding: 12px 8px; border-radius: 10px; text-align: center; }
+    .stat-number { font-size: 22px; font-weight: 700; margin-top: 4px; }
+    .header-logo { text-align: center; margin-bottom: 8px; }
+    .logo-cff-wrap { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+    .logo-cff-bar { background: #E30613; border-radius: 4px; padding: 10px 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(227,6,19,0.3); }
+    .logo-cff-bar svg { display: block; }
+    .logo-cff-bar.small { padding: 6px 18px; }
+    .logo-cff-bar.small svg { width: 48px; height: 22px; }
+    .logo-cff-text { font-weight: 800; font-size: 15px; letter-spacing: 1.5px; color: #111; font-family: Arial, Helvetica, sans-serif; }
+    .logo-cff-text.small { font-size: 11px; letter-spacing: 1px; }
+    .subtitle { text-align: center; color: #666; font-size: 13px; margin-top: 4px; }
+    #extincteur-details { background: #eef2f7; padding: 14px; border-radius: 10px; margin-bottom: 16px; border-left: 4px solid var(--info); }
+    #extincteur-details p { margin: 6px 0; font-size: 14px; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+    .badge-ok { background: #d4edda; color: #155724; }
+    .badge-ko { background: #f8d7da; color: #721c24; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+    .note-label { font-weight: 600; margin-top: 8px; display: block; }
+    .csv-preview-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 10px; padding: 12px; margin-top: 12px; max-height: 260px; overflow-y: auto; }
+    .csv-preview-box table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .csv-preview-box th { background: #e9ecef; padding: 6px 8px; text-align: left; position: sticky; top: 0; }
+    .csv-preview-box td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+    .csv-preview-box tr:last-child td { border-bottom: none; }
+    .csv-count { font-size: 13px; color: #555; margin: 8px 0 4px; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div id="step-auth" class="card">
+    <div class="header-logo">
+      <div class="logo-cff-wrap">
+        <div class="logo-cff-bar">
+          <svg viewBox="0 0 80 36" width="72" height="32" xmlns="http://www.w3.org/2000/svg" aria-label="SBB CFF FFS">
+            <polygon points="2,18 22,4 22,12 30,12 30,24 22,24 22,32" fill="white"/>
+            <rect x="28" y="12" width="24" height="12" fill="white"/>
+            <polygon points="78,18 58,4 58,12 50,12 50,24 58,24 58,32" fill="white"/>
+          </svg>
+        </div>
+        <div class="logo-cff-text">SBB CFF FFS</div>
+      </div>
+      <div class="subtitle">Contrôle Incendie &bull; Inspect360</div>
+    </div>
+    <h3 id="auth-title" style="text-align: center; margin-top: 18px;">Connexion</h3>
+    <label>Email :</label>
+    <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="email">
+    <label>Mot de passe :</label>
+    <input type="password" id="auth-password" placeholder="******" autocomplete="current-password">
+    <button class="btn btn-primary" id="btn-login" onclick="login()">Se connecter</button>
+    <button class="btn btn-success hidden" id="btn-signup" onclick="signup()">Créer mon compte gratuit</button>
+    <p style="text-align: center; margin-top: 16px; font-size: 13px; color: #3498db; cursor: pointer;" onclick="toggleAuthMode()" id="auth-toggle-text">Pas encore de compte ? Créer un compte gratuit</p>
+  </div>
+
+  <div id="step-scan" class="card hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <span id="user-email-display" style="font-size: 12px; color: #666;"></span>
+      <button onclick="logout()" style="padding: 5px 10px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; cursor: pointer;">Déconnexion</button>
+    </div>
+    <div class="header-logo" style="margin-bottom: 12px;">
+      <div class="logo-cff-wrap">
+        <div class="logo-cff-bar small">
+          <svg viewBox="0 0 80 36" width="48" height="22" xmlns="http://www.w3.org/2000/svg" aria-label="SBB CFF FFS">
+            <polygon points="2,18 22,4 22,12 30,12 30,24 22,24 22,32" fill="white"/>
+            <rect x="28" y="12" width="24" height="12" fill="white"/>
+            <polygon points="78,18 58,4 58,12 50,12 50,24 58,24 58,32" fill="white"/>
+          </svg>
+        </div>
+        <div class="logo-cff-text small">SBB CFF FFS</div>
+      </div>
+    </div>
+    <h2 style="margin: 0 0 12px 0; font-size: 18px;">Sélection du Site</h2>
+    <select id="site-select" onchange="loadSiteData()"><option value="">-- Choisir un site --</option></select>
+    <button class="btn btn-secondary" onclick="showNewSiteForm()">➕ Ajouter un nouveau site</button>
+    <div id="site-dashboard" class="hidden">
+      <hr>
+      <h3 style="margin: 0 0 8px 0;">Tableau de bord</h3>
+      <div class="stats-grid">
+        <div class="stat-box"><div style="font-size:12px;">Total</div><div id="stat-total" class="stat-number">0</div></div>
+        <div class="stat-box" style="color: var(--success);"><div style="font-size:12px;">Conformes</div><div id="stat-conforme" class="stat-number">0</div></div>
+        <div class="stat-box" style="color: var(--primary);"><div style="font-size:12px;">Défauts</div><div id="stat-defauts" class="stat-number">0</div></div>
+      </div>
+      <div id="scanner-section">
+        <h3 style="margin: 16px 0 8px 0;">Scanner QR Code</h3>
+        <div id="reader"></div>
+        <div style="margin-top: 16px;">
+          <label style="font-weight:600;">Importer liste extincteurs (.CSV)</label>
+          <p style="font-size:12px; color:#666; margin:4px 0 8px;">Format : qrcode;emplacement;type</p>
+          <input type="file" id="csv-file" accept=".csv,.txt" onchange="previewCSV(event)">
+          <div id="csv-preview-section" class="hidden">
+            <p class="csv-count" id="csv-count-label">0 extincteur(s)</p>
+            <div class="csv-preview-box"><table><thead><tr><th>QR Code</th><th>Emplacement</th><th>Type</th></tr></thead><tbody id="csv-preview-body"></tbody></table></div>
+            <button class="btn btn-success" id="btn-validate-csv" onclick="validateAndImportCSV()">✅ Valider et intégrer au site</button>
+            <button class="btn btn-secondary" onclick="cancelCSVPreview()">Annuler</button>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <h3 style="margin: 0 0 8px 0;">Rapports & Exports</h3>
+      <button class="btn btn-info" onclick="exportToCSV()">📊 Exporter les contrôles (Excel)</button>
+      <button class="btn btn-primary" onclick="generatePDFReport()">📄 Générer Rapport PDF pro</button>
+    </div>
+  </div>
+
+  <div id="step-new-site" class="card hidden">
+    <h2>Nouveau Site</h2>
+    <label>Nom du site :</label>
+    <input type="text" id="new-site-name" placeholder="ex: Usine Lyon, Entrepôt B">
+    <button class="btn btn-success" onclick="createSite()">Créer le site</button>
+    <button class="btn btn-secondary" onclick="showStep('step-scan')">Annuler</button>
+  </div>
+
+  <div id="step-choice" class="card hidden">
+    <h2 style="margin-top:0;">Fiche Extincteur</h2>
+    <div id="extincteur-details"></div>
+    <button class="btn btn-success" onclick="saveControl('CONFORME')">✅ CONFORME (OK)</button>
+    <button class="btn btn-danger" onclick="showDefects()">⚠️ NON CONFORME (Défaut)</button>
+    <button class="btn btn-secondary" onclick="resetApp()">↩ Rescanner</button>
+  </div>
+
+  <div id="step-defects" class="card hidden">
+    <h2 style="margin-top:0;">Défauts constatés</h2>
+    <form id="defects-form">
+      <div class="checkbox-group">
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Plomb/Scellé manquant"> 🔴 Plombage / Scellé manquant</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Goupille manquante"> 🔴 Goupille manquante</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Manomètre hors zone"> 🟡 Manomètre hors zone</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Flexible abîmé"> 🟡 Flexible / Lance abîmé</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Corrosion"> 🟡 Corrosion / Rouille</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Accès obstrué"> ⚪ Accès / Signalisation obstrué</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Étiquette illisible"> ⚪ Étiquette illisible</label>
+        <label class="checkbox-label"><input type="checkbox" name="defect" value="Autre"> ⚪ Autre</label>
+      </div>
+      <label class="note-label">Note / Observation à corriger :</label>
+      <textarea id="defect-note" placeholder="Décrire le défaut, la priorité, ou l'action à réaliser..."></textarea>
+      <button type="button" class="btn btn-danger" onclick="saveControl('NON CONFORME')">💾 Enregistrer le défaut</button>
+      <button type="button" class="btn btn-secondary" onclick="resetApp()">Annuler</button>
+    </form>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAbRHQOMAHVRybBxOgKj6Rl9jRgo-7Lk44",
+      authDomain: "extincteur-check.firebaseapp.com",
+      projectId: "extincteur-check",
+      storageBucket: "extincteur-check.firebasestorage.app",
+      messagingSenderId: "169428808632",
+      appId: "1:169428808632:web:c862dec61a9ff01ed6954d",
+      measurementId: "G-1MGG4D4PBS"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null, currentSiteId = null, currentSiteName = "", html5QrcodeScanner = null, currentExtincteur = null, isSignUpMode = false, fetchedControles = [], pendingCSVData = [];
+
+    window.toggleAuthMode = () => {
+      isSignUpMode = !isSignUpMode;
+      document.getElementById('auth-title').innerText = isSignUpMode ? "Créer un compte gratuit" : "Connexion";
+      document.getElementById('btn-login').classList.toggle('hidden', isSignUpMode);
+      document.getElementById('btn-signup').classList.toggle('hidden', !isSignUpMode);
+      document.getElementById('auth-toggle-text').innerText = isSignUpMode ? "Déjà un compte ? Connexion" : "Pas encore de compte ? Créer un compte gratuit";
+    };
+    window.signup = () => {
+      const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-password').value;
+      if (!email || !pass) return alert("Email et mot de passe requis.");
+      createUserWithEmailAndPassword(auth, email, pass).then(() => alert("Compte créé !")).catch(err => alert("Erreur : " + err.message));
+    };
+    window.login = () => {
+      const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-password').value;
+      if (!email || !pass) return alert("Email et mot de passe requis.");
+      signInWithEmailAndPassword(auth, email, pass).catch(err => alert("Erreur : " + err.message));
+    };
+    window.logout = () => signOut(auth);
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      if (user) { document.getElementById('user-email-display').innerText = user.email; showStep('step-scan'); loadUserSites(); }
+      else showStep('step-auth');
+    });
+
+    async function loadUserSites() {
+      const select = document.getElementById('site-select');
+      select.innerHTML = '<option value="">-- Choisir un site --</option>';
+      const q = query(collection(db, "sites"), where("userId", "==", currentUser.uid));
+      (await getDocs(q)).forEach(doc => { select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`; });
+    }
+    window.showNewSiteForm = () => showStep('step-new-site');
+    window.createSite = async () => {
+      const name = document.getElementById('new-site-name').value.trim();
+      if (!name) return alert("Veuillez saisir un nom de site.");
+      await addDoc(collection(db, "sites"), { name, userId: currentUser.uid, createdAt: new Date() });
+      alert("Site créé !"); document.getElementById('new-site-name').value = ''; showStep('step-scan'); loadUserSites();
+    };
+    window.loadSiteData = async () => {
+      currentSiteId = document.getElementById('site-select').value;
+      const siteDashboard = document.getElementById('site-dashboard');
+      if (currentSiteId) {
+        const select = document.getElementById('site-select');
+        currentSiteName = select.options[select.selectedIndex].text;
+        siteDashboard.classList.remove('hidden'); initScanner(); await updateStatsAndData(); cancelCSVPreview();
+      } else { siteDashboard.classList.add('hidden'); currentSiteName = ""; }
+    };
+    async function updateStatsAndData() {
+      const snap = await getDocs(query(collection(db, "controles"), where("siteId", "==", currentSiteId)));
+      fetchedControles = []; let total = 0, conformes = 0, defauts = 0;
+      snap.forEach(doc => { const d = doc.data(); fetchedControles.push(d); total++; if (d.statut === 'CONFORME') conformes++; else defauts++; });
+      fetchedControles.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+      document.getElementById('stat-total').innerText = total;
+      document.getElementById('stat-conforme').innerText = conformes;
+      document.getElementById('stat-defauts').innerText = defauts;
+    }
+
+    function initScanner() {
+      if (html5QrcodeScanner) { try { html5QrcodeScanner.clear(); } catch(e) {} }
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+      html5QrcodeScanner.render(onScanSuccess);
+    }
+    async function onScanSuccess(decodedText) {
+      try { html5QrcodeScanner.clear(); } catch(e) {}
+      const snap = await getDocs(query(collection(db, "extincteurs"), where("siteId", "==", currentSiteId), where("qrcode", "==", decodedText.trim())));
+      if (!snap.empty) {
+        currentExtincteur = snap.docs[0].data();
+        document.getElementById('extincteur-details').innerHTML = `<p><b>QR Code :</b> ${currentExtincteur.qrcode}</p><p><b>Emplacement :</b> ${currentExtincteur.emplacement||'N/C'}</p><p><b>Type :</b> ${currentExtincteur.type||'N/C'}</p><p><span class="badge badge-ok">Enregistré sur ce site</span></p>`;
+      } else {
+        currentExtincteur = { qrcode: decodedText.trim(), emplacement: 'Inconnu', type: 'Nouveau' };
+        document.getElementById('extincteur-details').innerHTML = `<p><b>QR scanné :</b> ${decodedText.trim()}</p><p><span class="badge badge-ko">Non enregistré sur ce site</span></p><p style="font-size:13px;color:#666;">Vous pouvez quand même effectuer le contrôle.</p>`;
+      }
+      showStep('step-choice');
+    }
+    window.saveControl = async (statut) => {
+      let details = [], note = '';
+      if (statut === 'NON CONFORME') {
+        document.querySelectorAll('input[name="defect"]:checked').forEach(cb => details.push(cb.value));
+        note = (document.getElementById('defect-note')?.value || '').trim();
+        if (!details.length && !note) return alert("Sélectionnez au moins un défaut ou ajoutez une note.");
+      }
+      let location = { lat: null, lng: null };
+      if (navigator.geolocation) {
+        try { const pos = await new Promise((res,rej) => navigator.geolocation.getCurrentPosition(res,rej,{timeout:4000})); location.lat = pos.coords.latitude; location.lng = pos.coords.longitude; } catch(e) {}
+      }
+      const now = new Date();
+      await addDoc(collection(db, "controles"), {
+        siteId: currentSiteId, siteName: currentSiteName, userId: currentUser.uid, userEmail: currentUser.email, technicien: currentUser.email,
+        qrcode: currentExtincteur.qrcode, emplacement: currentExtincteur.emplacement||'N/C', type: currentExtincteur.type||'N/C',
+        statut, details: details.join(' | ')||'RAS', note: note||'', latitude: location.lat, longitude: location.lng,
+        date: now.toLocaleString('fr-FR'), timestamp: now.getTime()
+      });
+      document.querySelectorAll('input[name="defect"]').forEach(cb => cb.checked = false);
+      if (document.getElementById('defect-note')) document.getElementById('defect-note').value = '';
+      alert("Contrôle enregistré !"); resetApp();
+    };
+
+    window.previewCSV = (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!currentSiteId) { alert("Sélectionnez un site d'abord."); event.target.value = ''; return; }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result, lines = text.split(/\r?\n/), sep = text.includes(';') ? ';' : ',';
+        pendingCSVData = [];
+        let startIdx = 0;
+        if (lines.length && /qrcode|qr|emplacement|type/i.test(lines[0])) startIdx = 1;
+        for (let i = startIdx; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const cols = lines[i].split(sep).map(c => c.replace(/^"|"$/g, '').trim());
+          if (cols[0]) pendingCSVData.push({ qrcode: cols[0], emplacement: cols[1]||'', type: cols[2]||'' });
+        }
+        if (!pendingCSVData.length) { alert("Aucun extincteur détecté."); cancelCSVPreview(); return; }
+        const tbody = document.getElementById('csv-preview-body'); tbody.innerHTML = '';
+        pendingCSVData.forEach(row => { tbody.innerHTML += `<tr><td>${row.qrcode}</td><td>${row.emplacement||'—'}</td><td>${row.type||'—'}</td></tr>`; });
+        document.getElementById('csv-count-label').innerText = `${pendingCSVData.length} extincteur(s) pour "${currentSiteName}"`;
+        document.getElementById('csv-preview-section').classList.remove('hidden');
+      };
+      reader.readAsText(file, 'UTF-8');
+    };
+    window.validateAndImportCSV = async () => {
+      if (!pendingCSVData.length || !currentSiteId) return alert("Aucune donnée ou site non sélectionné.");
+      const btn = document.getElementById('btn-validate-csv'); btn.disabled = true; btn.innerText = 'Importation…';
+      try {
+        let count = 0;
+        for (const row of pendingCSVData) { await addDoc(collection(db, "extincteurs"), { siteId: currentSiteId, qrcode: row.qrcode, emplacement: row.emplacement, type: row.type }); count++; }
+        alert(`✅ ${count} extincteur(s) intégré(s) au site "${currentSiteName}".`); cancelCSVPreview();
+      } catch(err) { alert("Erreur : " + err.message); btn.disabled = false; btn.innerText = '✅ Valider et intégrer au site'; }
+    };
+    window.cancelCSVPreview = () => {
+      pendingCSVData = [];
+      document.getElementById('csv-preview-section').classList.add('hidden');
+      document.getElementById('csv-preview-body').innerHTML = '';
+      document.getElementById('csv-file').value = '';
+      const btn = document.getElementById('btn-validate-csv');
+      if (btn) { btn.disabled = false; btn.innerText = '✅ Valider et intégrer au site'; }
+    };
+
+    window.exportToCSV = () => {
+      if (!fetchedControles.length) return alert("Aucune donnée à exporter.");
+      const data = fetchedControles.map(c => ({ Date: c.date, Site: c.siteName||currentSiteName, Technicien: c.userEmail||c.technicien, QR: c.qrcode, Emplacement: c.emplacement, Type: c.type||'', Statut: c.statut, Défauts: c.details, Note: c.note||'', Latitude: c.latitude, Longitude: c.longitude }));
+      const ws = XLSX.utils.json_to_sheet(data), wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Controles");
+      XLSX.writeFile(wb, `Rapport_Controles_${currentSiteName||'site'}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    };
+
+    window.generatePDFReport = () => {
+      if (!fetchedControles.length) return alert("Aucune donnée à imprimer.");
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth(), margin = 16;
+      let y = 0;
+      const now = new Date();
+      const tech = currentUser?.email || 'N/C';
+      const total = fetchedControles.length;
+      const conformes = fetchedControles.filter(c => c.statut === 'CONFORME').length;
+      const defauts = total - conformes;
+      const dateFin = fetchedControles[0]?.date || now.toLocaleString('fr-FR');
+
+      // En-tête rouge SBB CFF
+      doc.setFillColor(227, 6, 19);
+      doc.rect(0, 0, pageWidth, 32, 'F');
+      doc.setFillColor(255, 255, 255);
+      doc.triangle(margin, 16, margin+8, 8, margin+8, 13, 'F');
+      doc.triangle(margin, 16, margin+8, 24, margin+8, 19, 'F');
+      doc.rect(margin+6, 13, 5, 6, 'F');
+      doc.rect(margin+11, 13, 10, 6, 'F');
+      doc.rect(margin+19, 13, 5, 6, 'F');
+      doc.triangle(margin+32, 16, margin+24, 8, margin+24, 13, 'F');
+      doc.triangle(margin+32, 16, margin+24, 24, margin+24, 19, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('SBB CFF FFS', margin + 38, 12);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text('Contrôle Incendie \u2014 Inspect360', margin + 38, 18);
+      doc.setFontSize(8);
+      doc.text('Rapport d\'inspection sécurité incendie', margin + 38, 24);
+      doc.text(`Généré le ${now.toLocaleString('fr-FR')}`, pageWidth - margin, 16, { align: 'right' });
+
+      y = 40;
+      doc.setTextColor(44, 62, 80);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text('Informations du contrôle', margin, y); y += 7;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      [`Site                  :  ${currentSiteName||'Non spécifié'}`, `Technicien            :  ${tech}`, `Date de fin contrôle  :  ${dateFin}`, `Nombre total          :  ${total}  |  Conformes : ${conformes}  |  Défauts : ${defauts}`].forEach(l => { doc.text(l, margin, y); y += 6; });
+      y += 4;
+      doc.setDrawColor(227, 6, 19); doc.setLineWidth(0.6); doc.line(margin, y, pageWidth - margin, y); y += 8;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(44, 62, 80);
+      doc.text('Détail des contrôles', margin, y); y += 8;
+
+      fetchedControles.forEach((ctrl, index) => {
+        if (y > 265) {
+          doc.addPage();
+          doc.setFillColor(227, 6, 19); doc.rect(0, 0, pageWidth, 12, 'F');
+          doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+          doc.text('SBB CFF FFS \u2014 Rapport d\'inspection (suite)', margin, 8); y = 20;
+        }
+        const isOk = ctrl.statut === 'CONFORME';
+        doc.setFillColor(isOk ? 232 : 253, isOk ? 245 : 242, isOk ? 233 : 242);
+        doc.roundedRect(margin - 2, y - 4, pageWidth - 2 * margin + 4, isOk ? 18 : 26, 2, 2, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        doc.setTextColor(isOk ? 39 : 192, isOk ? 174 : 57, isOk ? 96 : 43);
+        doc.text(`${index+1}.  ${ctrl.statut}`, margin, y);
+        doc.setTextColor(40,40,40); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+        doc.text(`QR: ${ctrl.qrcode}   |   Empl.: ${ctrl.emplacement||'N/C'}   |   Type: ${ctrl.type||'N/C'}`, margin + 38, y); y += 5;
+        doc.setFontSize(8); doc.setTextColor(80,80,80);
+        doc.text(`Date: ${ctrl.date||'N/C'}   |   Technicien: ${ctrl.userEmail||ctrl.technicien||'N/C'}`, margin, y); y += 5;
+        if (!isOk) {
+          if (ctrl.details && ctrl.details !== 'RAS') { doc.setTextColor(150,40,40); doc.text(`Défauts: ${ctrl.details}`, margin, y); y += 4.5; }
+          if (ctrl.note) { doc.setTextColor(100,60,20); const nl = doc.splitTextToSize(`Note: ${ctrl.note}`, pageWidth - 2*margin - 4); doc.text(nl, margin, y); y += nl.length * 4; }
+        }
+        y += 6;
+      });
+
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i); doc.setFontSize(7); doc.setTextColor(140,140,140);
+        doc.text(`SBB CFF FFS \u2014 Inspect360  |  Page ${i}/${pageCount}`, pageWidth/2, 290, { align: 'center' });
+        doc.text(`Technicien: ${tech}`, margin, 290);
+      }
+      doc.setPage(pageCount);
+      let sigY = y < 250 ? Math.max(y + 10, 250) : 270;
+      doc.setDrawColor(180); doc.setLineWidth(0.3); doc.line(margin, sigY, margin + 70, sigY);
+      doc.setFontSize(8); doc.setTextColor(80); doc.text('Signature technicien', margin, sigY + 5);
+      doc.save(`Rapport_CFF_${(currentSiteName||'site').replace(/\s+/g,'_')}_${now.toISOString().slice(0,10)}.pdf`);
+    };
+
+    window.showDefects = () => showStep('step-defects');
+    window.resetApp = () => { showStep('step-scan'); if (currentSiteId) loadSiteData(); };
+    function showStep(id) {
+      document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

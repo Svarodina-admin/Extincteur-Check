@@ -170,7 +170,7 @@ async function onScanSuccess(txt){
     ||siteExtincteurs.find(e=>raw.includes(String(e.qrcode).trim())||String(e.qrcode).trim().includes(raw));
   const unk=document.getElementById("unknown-form");
   function renderFiche(e, badges){
-    const serie=e.serie||e.qrcode||"—";
+    const serie=(e.serie&&!/^en service$/i.test(String(e.serie).trim()))?(e.serie):(e.qrcode||"—");
     document.getElementById("extincteur-details").innerHTML=
       `<div class="serial-box"><div class="serial-label">N° de série</div><div class="serial-value">${serie}</div></div>`+
       `<div class="fiche-row"><span>GIAI</span><span style="font-size:12px">${e.qrcode||"—"}</span></div>`+
@@ -237,31 +237,50 @@ window.previewCSV=ev=>{
   if(!currentSiteId){alert("Sélectionnez un site.");ev.target.value="";return}
   const r=new FileReader();
   r.onload=e=>{
-    const text=e.target.result,lines=text.split(/\r?\n/),sep=text.includes(";")?";":",";
+    const text=e.target.result.replace(/^\uFEFF/,"");
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());
+    if(!lines.length){alert("Fichier vide.");return}
+    const sep=text.includes(";")?";":",";
+    const split=(line)=>line.split(sep).map(c=>c.replace(/^"|"$/g,"").trim());
+    const headers=split(lines[0]).map(h=>h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""));
+    const idxOf=(...names)=>{
+      for(const n of names){const i=headers.findIndex(h=>h.includes(n));if(i>=0)return i}
+      return -1;
+    };
+    const iGiai=idxOf("giai","code");
+    const iEmpl=idxOf("emplacement");
+    const iLocal=idxOf("local");
+    const iStatut=idxOf("statut");
+    const iType=idxOf("type","modele","modèle");
+    const iAnnee=idxOf("annee","année","year");
+    const iSerie=idxOf("numero de serie","numéro de série","n° de série","serie","série");
+    const col=(cols,i,fallback)=> (i>=0 && cols[i]!==undefined)?cols[i]:(fallback!==undefined?cols[fallback]||"":"");
     pendingCSVData=[];
-    let start=0;
-    if(lines.length&&/giai|qrcode|qr|emplacement|numéro|numero|série|serie|code/i.test(lines[0]))start=1;
+    const start=headers.some(h=>/giai|qr|emplacement|serie|local|type/.test(h))?1:0;
     for(let i=start;i<lines.length;i++){
-      if(!lines[i].trim())continue;
-      const cols=lines[i].split(sep).map(c=>c.replace(/^"|"$/g,"").trim());
+      const cols=split(lines[i]);
       if(!cols[0])continue;
-      pendingCSVData.push({
-        qrcode:cols[0],
-        emplacement:cols[1]||"",
-        local:cols[2]||"",
-        statutEquip:cols[3]||"",
-        type:cols[4]||"",
-        annee:cols[5]||"",
-        serie:cols[6]||cols[0]
-      });
+      const qrcode=col(cols,iGiai,0);
+      const serie=col(cols,iSerie,6)||qrcode;
+      const type=col(cols,iType,4);
+      const local=col(cols,iLocal,2);
+      const emplacement=col(cols,iEmpl,1);
+      const annee=col(cols,iAnnee,5);
+      const statutEquip=col(cols,iStatut,3);
+      const serieOk=(serie && !/^en service$/i.test(serie))?serie:qrcode;
+      pendingCSVData.push({qrcode,serie:serieOk,emplacement,local,statutEquip,type,annee});
     }
-    if(!pendingCSVData.length){alert("Aucun extincteur.");cancelCSVPreview();return}
+    if(!pendingCSVData.length){alert("Aucun extincteur détecté.");cancelCSVPreview();return}
     const tb=document.getElementById("csv-preview-body");tb.innerHTML="";
-    pendingCSVData.slice(0,25).forEach(row=>{
-      tb.innerHTML+=`<tr><td>${row.serie}</td><td style="font-size:10px">${String(row.qrcode).slice(-10)}</td><td>${row.local||"—"}</td><td>${row.type||"—"}</td></tr>`;
+    pendingCSVData.slice(0,20).forEach(row=>{
+      tb.innerHTML+=`<tr><td style="font-weight:600">${row.serie}</td><td style="font-size:10px">${String(row.qrcode).slice(-10)}</td><td>${row.local||"—"}</td><td>${row.type||"—"}</td></tr>`;
     });
-    if(pendingCSVData.length>25)tb.innerHTML+=`<tr><td colspan="4">… +${pendingCSVData.length-25} autres</td></tr>`;
-    document.getElementById("csv-count-label").innerText=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';
+    if(pendingCSVData.length>20)tb.innerHTML+=`<tr><td colspan="4">… +${pendingCSVData.length-20} autres</td></tr>`;
+    const bad=pendingCSVData.filter(r=>/^en service$/i.test(r.serie)).length;
+    let msg=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';
+    if(bad)msg+=" ⚠️ "+bad+" n° série suspects";
+    else msg+=" ✓ N° série OK (ex: "+pendingCSVData[0].serie+")";
+    document.getElementById("csv-count-label").innerText=msg;
     document.getElementById("csv-preview-section").classList.remove("hidden");
   };
   r.readAsText(f,"UTF-8");
@@ -275,6 +294,11 @@ window.generatePDFReport=async()=>{
   const nE=siteExtincteurs.length;
   if(nE===0)return alert("Aucun extincteur importé. Importez d'abord le CSV.");
   const nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;
+  const getSerie=e=>{
+    const s=(e.serie||"").trim();
+    if(s && !/^en service$/i.test(s) && s!==e.statutEquip) return s;
+    return e.qrcode||"—";
+  };
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   const pw=doc.internal.pageSize.getWidth(),m=14;
@@ -313,7 +337,7 @@ window.generatePDFReport=async()=>{
       const st=ctrl?ctrl.statut:"FAIT";
       const ok=st==="CONFORME";
       doc.setTextColor(ok?39:192,ok?174:57,ok?96:43);
-      const serie=e.serie||e.qrcode||"";
+      const serie=getSerie(e);
       const line1=(i+1)+". ["+st+"] N° "+serie+" | "+(e.type||"");
       doc.text(line1,m,y);y+=4;
       doc.setTextColor(ok?60:120,ok?60:40,ok?60:40);
@@ -337,7 +361,7 @@ window.generatePDFReport=async()=>{
     pending.forEach((e,i)=>{
       if(y>280){doc.addPage();y=20}
       doc.setTextColor(150,40,40);
-      doc.text((i+1)+". [À FAIRE] N° "+(e.serie||e.qrcode)+" | "+(e.type||""),m,y);y+=4;
+      doc.text((i+1)+". [À FAIRE] N° "+getSerie(e)+" | "+(e.type||""),m,y);y+=4;
       doc.text("   "+(e.emplacement||"")+" / "+(e.local||"")+" | Année: "+(e.annee||"—"),m,y);y+=5;
     });
   }
@@ -362,7 +386,7 @@ window.showExtincteurList=async()=>{
     siteExtincteurs.forEach(e=>{
       const done=controlledQrcodes.has(e.qrcode);
       const badge=done?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-ko">—</span>';
-      rows+=`<tr style="border-bottom:1px solid #eee"><td style="padding:3px;font-weight:600">${e.serie||e.qrcode}</td><td style="padding:3px">${e.local||e.emplacement||"—"}</td><td style="padding:3px">${e.type||"—"}</td><td style="padding:3px">${e.annee||"—"}</td><td style="padding:3px;text-align:center">${badge}</td></tr>`;
+      rows+=`<tr style="border-bottom:1px solid #eee"><td style="padding:3px;font-weight:600">${(e.serie&&!/^en service$/i.test(e.serie))?e.serie:(e.qrcode||"—")}</td><td style="padding:3px">${e.local||e.emplacement||"—"}</td><td style="padding:3px">${e.type||"—"}</td><td style="padding:3px">${e.annee||"—"}</td><td style="padding:3px;text-align:center">${badge}</td></tr>`;
     });
     rows+="</tbody></table>";
     box.innerHTML=rows;

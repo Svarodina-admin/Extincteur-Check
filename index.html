@@ -33,9 +33,15 @@ textarea{min-height:70px}
 .badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:12px;font-weight:600}
 .badge-ok{background:#d4edda;color:#155724}.badge-ko{background:#f8d7da;color:#721c24}
 hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
-.csv-preview-box{background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:10px;margin-top:10px;max-height:200px;overflow-y:auto;overflow-x:auto;font-size:12px}
-#ext-list-box details{border-bottom:1px solid #eee;padding:6px 2px}#ext-list-box summary{cursor:pointer;word-break:break-all}#ext-list-box .fiche{background:#eef2f7;border-left:4px solid var(--info);border-radius:8px;padding:8px 10px;margin-top:6px}
+.csv-preview-box{background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:10px;margin-top:10px;max-height:200px;overflow-y:auto;font-size:12px}
 #pdf-block-msg{padding:10px;border-radius:8px;font-size:13px;margin:8px 0;text-align:center}
+.serial-box{background:linear-gradient(135deg,#0a1f4d,#1a3a6b);color:#fff;border-radius:12px;padding:16px;text-align:center;margin-bottom:14px}
+.serial-label{font-size:11px;opacity:.85;letter-spacing:1px;text-transform:uppercase}
+.serial-value{font-size:22px;font-weight:800;letter-spacing:1px;margin-top:4px;word-break:break-all}
+.fiche-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
+.fiche-row span:first-child{color:#666;font-weight:500}
+.fiche-row span:last-child{font-weight:600;text-align:right;max-width:60%}
+#unknown-form{background:#fff8e6;border:1px solid #f0d78c;border-radius:10px;padding:12px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -73,11 +79,11 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
 <h3 style="margin:12px 0 6px;font-size:15px">Scanner QR</h3>
 <div id="reader"></div>
 <label style="font-weight:600;font-size:14px;margin-top:12px;display:block">Importer CSV extincteurs</label>
-<p style="font-size:12px;color:#666">Format : Code GIAI;Emplacement;Local;Statut;Type / Modèle;Année;Numéro de série (l'ancien format qrcode;emplacement;type reste accepté)</p>
+<p style="font-size:12px;color:#666">Format : qrcode;emplacement;type (GIAI)</p>
 <input type="file" id="csv-file" accept=".csv,.txt" onchange="previewCSV(event)">
 <div id="csv-preview-section" class="hidden">
 <p id="csv-count-label" style="font-size:13px;font-weight:600"></p>
-<div class="csv-preview-box"><table><thead><tr><th>GIAI/QR</th><th>Local</th><th>Type</th><th>Année</th></tr></thead><tbody id="csv-preview-body"></tbody></table></div>
+<div class="csv-preview-box"><table><thead><tr><th>N° série / GIAI</th><th>Empl.</th><th>Type</th></tr></thead><tbody id="csv-preview-body"></tbody></table></div>
 <button class="btn btn-success" id="btn-validate-csv" onclick="validateAndImportCSV()">✅ Valider et intégrer</button>
 <button class="btn btn-secondary" onclick="cancelCSVPreview()">Annuler</button>
 </div>
@@ -105,6 +111,16 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
 <div id="step-choice" class="card hidden">
 <h2 style="margin-top:0">Fiche Extincteur</h2>
 <div id="extincteur-details"></div>
+<div id="unknown-form" class="hidden">
+<p style="font-size:13px;margin:0 0 8px;font-weight:600">Code inconnu — compléter pour l'ajouter à la liste :</p>
+<label style="font-size:12px">N° de série / GIAI</label>
+<input type="text" id="unk-serie" readonly>
+<label style="font-size:12px">Emplacement</label>
+<input type="text" id="unk-emplacement" placeholder="Ex: Hall entrée">
+<label style="font-size:12px">Type</label>
+<input type="text" id="unk-type" placeholder="Ex: CO2 5kg">
+<button class="btn btn-info" onclick="addUnknownToList()">➕ Ajouter à la liste du site</button>
+</div>
 <button class="btn btn-success" onclick="saveControl('CONFORME')">✅ CONFORME</button>
 <button class="btn btn-danger" onclick="showDefects()">⚠️ NON CONFORME</button>
 <button class="btn btn-secondary" onclick="window.goBack()">↩ Retour au scan</button>
@@ -144,72 +160,73 @@ window.createSite=async()=>{const n=document.getElementById("new-site-name").val
 window.loadSiteData=async()=>{currentSiteId=document.getElementById("site-select").value;const d=document.getElementById("site-dashboard");if(currentSiteId){const s=document.getElementById("site-select");currentSiteName=s.options[s.selectedIndex].text;d.classList.remove("hidden");initScanner();await updateStatsAndData();cancelCSVPreview()}else{d.classList.add("hidden");currentSiteName=""}};
 async function updateStatsAndData(){const es=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));siteExtincteurs=[];es.forEach(d=>siteExtincteurs.push(d.data()));const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));fetchedControles=[];let t=0,c=0,df=0;controlledQrcodes=new Set();snap.forEach(doc=>{const d=doc.data();fetchedControles.push(d);t++;if(d.statut==="CONFORME")c++;else df++;if(d.qrcode)controlledQrcodes.add(d.qrcode)});fetchedControles.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;document.getElementById("stat-progress").innerText=nE?nO+"/"+nE:"0/0";document.getElementById("stat-total").innerText=t;document.getElementById("stat-conforme").innerText=c;document.getElementById("stat-defauts").innerText=df;const msg=document.getElementById("pdf-block-msg");if(nE>0&&nO<nE){msg.textContent="📋 Progression : "+nO+"/"+nE+" contrôlés — "+(nE-nO)+" restant(s) — PDF disponible";msg.style.background="#e8f4fd";msg.style.color="#0c5460";msg.classList.remove("hidden")}else if(nE>0){msg.innerHTML="✅ "+nO+"/"+nE+" — Tous contrôlés — PDF disponible<br><small>Période terminée → « Reset période » pour le mois suivant</small>";msg.style.background="#d4edda";msg.style.color="#155724";msg.classList.remove("hidden")}else msg.classList.add("hidden")};
 function initScanner(){if(html5QrcodeScanner){try{html5QrcodeScanner.clear()}catch(e){}}html5QrcodeScanner=new Html5QrcodeScanner("reader",{fps:10,qrbox:250},false);html5QrcodeScanner.render(onScanSuccess)};
-const giaiCore=x=>{const d=String(x||"").replace(/\D/g,"");return(d.startsWith("8004")&&d.length>16)?d.slice(4):d};
-function ficheHTML(e){
-  const row=(l,v)=>v===undefined?"":`<p style="margin:4px 0"><b>${l} :</b> ${(v!==null&&String(v).trim())?v:"N/C"}</p>`;
-  return row("GIAI / QR",e.qrcode)+row("Local",e.local)+row("Emplacement",e.emplacement)+row("Statut",e.etat)+row("Type / Modèle",e.type)+row("Année",e.annee)+row("N° de série",e.serie);
-}
 async function onScanSuccess(txt){
   try{html5QrcodeScanner.clear()}catch(e){}
   const raw=(txt||"").trim();
-  let match=null;
   if(!siteExtincteurs.length)await updateStatsAndData();
-  const rc=giaiCore(raw);
-  match=siteExtincteurs.find(e=>e.qrcode===raw)
-    ||(rc&&siteExtincteurs.find(e=>giaiCore(e.qrcode)===rc))
+  let match=siteExtincteurs.find(e=>e.qrcode===raw)
     ||siteExtincteurs.find(e=>String(e.qrcode).trim().toLowerCase()===raw.toLowerCase())
     ||siteExtincteurs.find(e=>raw.includes(String(e.qrcode).trim())||String(e.qrcode).trim().includes(raw));
+  const unk=document.getElementById("unknown-form");
   if(match){
-    currentExtincteur={...match,emplacement:match.emplacement||"N/C",type:match.type||"N/C"};
+    currentExtincteur={qrcode:match.qrcode,emplacement:match.emplacement||"N/C",type:match.type||"N/C",serie:match.serie||match.qrcode};
     const deja=controlledQrcodes.has(match.qrcode);
     document.getElementById("extincteur-details").innerHTML=
-      ficheHTML(match)+
-      `<p><span class="badge badge-ok">Ligne trouvée dans la liste</span></p>`+
-      (deja?`<p><span class="badge" style="background:#fff3cd;color:#856404">Déjà contrôlé cette période</span></p>`:"");
+      `<div class="serial-box"><div class="serial-label">N° de série / GIAI</div><div class="serial-value">${match.qrcode}</div></div>`+
+      `<div class="fiche-row"><span>Emplacement</span><span>${match.emplacement||"—"}</span></div>`+
+      `<div class="fiche-row"><span>Type</span><span>${match.type||"—"}</span></div>`+
+      `<div style="margin-top:10px"><span class="badge badge-ok">Ligne trouvée dans la liste</span>`+
+      (deja?` <span class="badge" style="background:#fff3cd;color:#856404">Déjà contrôlé</span>`:"")+`</div>`;
+    unk.classList.add("hidden");
   } else {
     const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId),where("qrcode","==",raw)));
     if(!snap.empty){
-      currentExtincteur=snap.docs[0].data();
+      const d=snap.docs[0].data();
+      currentExtincteur={qrcode:d.qrcode,emplacement:d.emplacement||"N/C",type:d.type||"N/C",serie:d.serie||d.qrcode};
       document.getElementById("extincteur-details").innerHTML=
-        ficheHTML(currentExtincteur)+
-        `<p><span class="badge badge-ok">Trouvé en base</span></p>`;
+        `<div class="serial-box"><div class="serial-label">N° de série / GIAI</div><div class="serial-value">${d.qrcode}</div></div>`+
+        `<div class="fiche-row"><span>Emplacement</span><span>${d.emplacement||"—"}</span></div>`+
+        `<div class="fiche-row"><span>Type</span><span>${d.type||"—"}</span></div>`+
+        `<div style="margin-top:10px"><span class="badge badge-ok">Trouvé en base</span></div>`;
+      unk.classList.add("hidden");
     } else {
-      currentExtincteur={qrcode:raw,emplacement:"Inconnu",type:"Hors liste"};
+      currentExtincteur={qrcode:raw,emplacement:"",type:"",serie:raw};
       document.getElementById("extincteur-details").innerHTML=
-        `<p><b>Code scanné :</b> ${raw}</p>`+
-        `<p><span class="badge badge-ko">Pas dans la liste importée</span></p>`+
-        `<p style="font-size:12px;color:#666">Vous pouvez quand même enregistrer un contrôle.</p>`;
+        `<div class="serial-box" style="background:linear-gradient(135deg,#7f1d1d,#b91c1c)"><div class="serial-label">N° de série / GIAI scanné</div><div class="serial-value">${raw}</div></div>`+
+        `<p style="font-size:13px;color:#856404;margin:10px 0 0">Pas dans la liste importée. Complétez le formulaire ci-dessous pour l'ajouter, ou contrôlez directement.</p>`;
+      document.getElementById("unk-serie").value=raw;
+      document.getElementById("unk-emplacement").value="";
+      document.getElementById("unk-type").value="";
+      unk.classList.remove("hidden");
     }
   }
   showStep("step-choice");
 }
-window.saveControl=async statut=>{let details=[],note="";if(statut==="NON CONFORME"){document.querySelectorAll('input[name="defect"]:checked').forEach(cb=>details.push(cb.value));note=(document.getElementById("defect-note")?.value||"").trim();if(!details.length&&!note)return alert("Sélectionnez un défaut ou une note.")}const techName=(document.getElementById("tech-name")?.value||"").trim()||currentUser.email;const now=new Date();await addDoc(collection(db,"controles"),{siteId:currentSiteId,siteName:currentSiteName,userId:currentUser.uid,userEmail:currentUser.email,technicien:techName,qrcode:currentExtincteur.qrcode,emplacement:currentExtincteur.emplacement||"N/C",type:currentExtincteur.type||"N/C",statut,details:details.join(" | ")||"RAS",note:note||"",timestamp:now.getTime()});try{localStorage.setItem("inspect360_tech_name",techName)}catch(e){}document.querySelectorAll('input[name="defect"]').forEach(cb=>cb.checked=false);if(document.getElementById("defect-note"))document.getElementById("defect-note").value="";alert("Contrôle enregistré !");window.goBack()};
-function parseCSVLine(l,sep){const out=[];let cur="",q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(ch==='"'){if(q&&l[i+1]==='"'){cur+='"';i++}else q=!q}else if(ch===sep&&!q){out.push(cur.trim());cur=""}else cur+=ch}out.push(cur.trim());return out}
-function parseExtCSV(text){
-  text=String(text).replace(/^﻿/,"");
-  const lines=text.split(/\r?\n/),sep=text.includes(";")?";":",";
-  const norm=x=>String(x).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/g,"");
-  let start=0,idx={qrcode:0,emplacement:1,type:2};
-  if(lines.length&&/qrcode|qr|giai|emplacement|type/i.test(lines[0])){
-    start=1;
-    const h=parseCSVLine(lines[0],sep).map(norm);
-    const find=re=>h.findIndex(x=>re.test(x));
-    const m={qrcode:find(/^(codegiai|giai|qrcode|qr|giaiqr)$/),emplacement:find(/^emplacement$/),local:find(/^local$/),etat:find(/^(statut|etat)$/),type:find(/^(typemodele|type|modele)$/),annee:find(/^annee$/),serie:find(/^(numerodeserie|numeroserie|noserie|serie)$/)};
-    if(m.qrcode>=0)idx=m;
-  }
-  const rows=[];
-  for(let i=start;i<lines.length;i++){
-    if(!lines[i].trim())continue;
-    const c=parseCSVLine(lines[i],sep),g=k=>(idx[k]>=0&&idx[k]!==undefined?(c[idx[k]]||""):"");
-    const qr=g("qrcode");
-    if(qr)rows.push({qrcode:qr,emplacement:g("emplacement"),local:g("local"),etat:g("etat"),type:g("type"),annee:g("annee"),serie:g("serie")});
-  }
-  return rows;
-}
-window.previewCSV=ev=>{const f=ev.target.files[0];if(!f)return;if(!currentSiteId){alert("Sélectionnez un site.");ev.target.value="";return}const r=new FileReader();r.onload=e=>{pendingCSVData=parseExtCSV(e.target.result);if(!pendingCSVData.length){alert("Aucun extincteur.");cancelCSVPreview();return}const tb=document.getElementById("csv-preview-body");tb.innerHTML="";pendingCSVData.forEach(row=>{tb.innerHTML+=`<tr><td>${row.qrcode}</td><td>${row.local||row.emplacement||"—"}</td><td>${row.type||"—"}</td><td>${row.annee||"—"}</td></tr>`});document.getElementById("csv-count-label").innerText=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';document.getElementById("csv-preview-section").classList.remove("hidden")};r.readAsText(f,"UTF-8")};
-window.validateAndImportCSV=async()=>{if(!pendingCSVData.length||!currentSiteId)return alert("Aucune donnée.");const btn=document.getElementById("btn-validate-csv");btn.disabled=true;btn.innerText="Import…";try{let n=0;for(const row of pendingCSVData){await addDoc(collection(db,"extincteurs"),{siteId:currentSiteId,...row});n++}alert("✅ "+n+" extincteur(s) intégré(s).");cancelCSVPreview();await updateStatsAndData()}catch(e){alert("Erreur : "+e.message);btn.disabled=false;btn.innerText="✅ Valider et intégrer"}};
+window.addUnknownToList=async()=>{
+  if(!currentSiteId)return alert("Sélectionnez un site.");
+  const serie=(document.getElementById("unk-serie").value||"").trim();
+  const empl=(document.getElementById("unk-emplacement").value||"").trim();
+  const typ=(document.getElementById("unk-type").value||"").trim();
+  if(!serie)return alert("N° de série manquant.");
+  try{
+    await addDoc(collection(db,"extincteurs"),{siteId:currentSiteId,qrcode:serie,serie:serie,emplacement:empl,type:typ});
+    currentExtincteur={qrcode:serie,serie:serie,emplacement:empl||"N/C",type:typ||"N/C"};
+    siteExtincteurs.push(currentExtincteur);
+    document.getElementById("unknown-form").classList.add("hidden");
+    document.getElementById("extincteur-details").innerHTML=
+      `<div class="serial-box"><div class="serial-label">N° de série / GIAI</div><div class="serial-value">${serie}</div></div>`+
+      `<div class="fiche-row"><span>Emplacement</span><span>${empl||"—"}</span></div>`+
+      `<div class="fiche-row"><span>Type</span><span>${typ||"—"}</span></div>`+
+      `<div style="margin-top:10px"><span class="badge badge-ok">Ajouté à la liste</span></div>`;
+    alert("✅ Extincteur ajouté à la liste du site.");
+    await updateStatsAndData();
+  }catch(e){alert("Erreur : "+e.message)}
+};
+window.saveControl=async statut=>{let details=[],note="";if(statut==="NON CONFORME"){document.querySelectorAll('input[name="defect"]:checked').forEach(cb=>details.push(cb.value));note=(document.getElementById("defect-note")?.value||"").trim();if(!details.length&&!note)return alert("Sélectionnez un défaut ou une note.")}const techName=(document.getElementById("tech-name")?.value||"").trim()||currentUser.email;const now=new Date();await addDoc(collection(db,"controles"),{siteId:currentSiteId,siteName:currentSiteName,userId:currentUser.uid,userEmail:currentUser.email,technicien:techName,qrcode:currentExtincteur.qrcode,serie:currentExtincteur.serie||currentExtincteur.qrcode,emplacement:currentExtincteur.emplacement||"N/C",type:currentExtincteur.type||"N/C",statut,details:details.join(" | ")||"RAS",note:note||"",timestamp:now.getTime()});try{localStorage.setItem("inspect360_tech_name",techName)}catch(e){}document.querySelectorAll('input[name="defect"]').forEach(cb=>cb.checked=false);if(document.getElementById("defect-note"))document.getElementById("defect-note").value="";alert("Contrôle enregistré !");window.goBack()};
+window.previewCSV=ev=>{const f=ev.target.files[0];if(!f)return;if(!currentSiteId){alert("Sélectionnez un site.");ev.target.value="";return}const r=new FileReader();r.onload=e=>{const text=e.target.result,lines=text.split(/\r?\n/),sep=text.includes(";")?";":",";pendingCSVData=[];let start=0;if(lines.length&&/qrcode|qr|giai|emplacement|type|serie/i.test(lines[0]))start=1;for(let i=start;i<lines.length;i++){if(!lines[i].trim())continue;const cols=lines[i].split(sep).map(c=>c.replace(/^"|"$/g,"").trim());if(cols[0])pendingCSVData.push({qrcode:cols[0],emplacement:cols[1]||"",type:cols[2]||"",serie:cols[3]||cols[0]})}if(!pendingCSVData.length){alert("Aucun extincteur.");cancelCSVPreview();return}const tb=document.getElementById("csv-preview-body");tb.innerHTML="";pendingCSVData.forEach(row=>{tb.innerHTML+=`<tr><td>${row.qrcode}</td><td>${row.emplacement||"—"}</td><td>${row.type||"—"}</td></tr>`});document.getElementById("csv-count-label").innerText=pendingCSVData.length+' extincteur(s) pour "'+currentSiteName+'"';document.getElementById("csv-preview-section").classList.remove("hidden")};r.readAsText(f,"UTF-8")};
+window.validateAndImportCSV=async()=>{if(!pendingCSVData.length||!currentSiteId)return alert("Aucune donnée.");const btn=document.getElementById("btn-validate-csv");btn.disabled=true;btn.innerText="Import…";try{let n=0;for(const row of pendingCSVData){await addDoc(collection(db,"extincteurs"),{siteId:currentSiteId,qrcode:row.qrcode,serie:row.serie||row.qrcode,emplacement:row.emplacement,type:row.type});n++}alert("✅ "+n+" extincteur(s) intégré(s).");cancelCSVPreview();await updateStatsAndData()}catch(e){alert("Erreur : "+e.message);btn.disabled=false;btn.innerText="✅ Valider et intégrer"}};
 window.cancelCSVPreview=()=>{pendingCSVData=[];document.getElementById("csv-preview-section").classList.add("hidden");document.getElementById("csv-preview-body").innerHTML="";document.getElementById("csv-file").value="";const b=document.getElementById("btn-validate-csv");if(b){b.disabled=false;b.innerText="✅ Valider et intégrer"}};
-window.exportToCSV=()=>{if(!fetchedControles.length)return alert("Aucune donnée.");const data=fetchedControles.map(c=>({Site:c.siteName||currentSiteName,Technicien:c.technicien||c.userEmail,Email:c.userEmail,QR:c.qrcode,Empl:c.emplacement,Type:c.type||"",Statut:c.statut,Defauts:c.details,Note:c.note||""}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Controles");XLSX.writeFile(wb,"Rapport_"+(currentSiteName||"site")+"_"+new Date().toISOString().slice(0,10)+".xlsx")};
+window.exportToCSV=()=>{if(!fetchedControles.length)return alert("Aucune donnée.");const data=fetchedControles.map(c=>({Site:c.siteName||currentSiteName,Technicien:c.technicien||c.userEmail,Email:c.userEmail,"N° série":c.serie||c.qrcode,GIAI:c.qrcode,Empl:c.emplacement,Type:c.type||"",Statut:c.statut,Defauts:c.details,Note:c.note||""}));const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Controles");XLSX.writeFile(wb,"Rapport_"+(currentSiteName||"site")+"_"+new Date().toISOString().slice(0,10)+".xlsx")};
 window.generatePDFReport=async()=>{
   if(!currentSiteId)return alert("Sélectionnez un site.");
   await updateStatsAndData();
@@ -254,7 +271,7 @@ window.generatePDFReport=async()=>{
       const st=ctrl?ctrl.statut:"FAIT";
       const ok=st==="CONFORME";
       doc.setTextColor(ok?39:192,ok?174:57,ok?96:43);
-      doc.text((i+1)+". ["+st+"] GIAI: "+e.qrcode+" | "+(e.emplacement||"N/C")+" | "+(e.type||""),m,y);y+=4;
+      doc.text((i+1)+". ["+st+"] N° série: "+(e.serie||e.qrcode)+" | "+(e.emplacement||"N/C")+" | "+(e.type||""),m,y);y+=4;
       doc.setTextColor(80,80,80);
       if(ctrl){
         if(ctrl.details&&ctrl.details!=="RAS"){doc.text("   Défauts: "+ctrl.details,m,y);y+=3.5}
@@ -274,7 +291,7 @@ window.generatePDFReport=async()=>{
     pending.forEach((e,i)=>{
       if(y>280){doc.addPage();y=20}
       doc.setTextColor(150,40,40);
-      doc.text((i+1)+". [À FAIRE] GIAI: "+e.qrcode+" | "+(e.emplacement||"N/C")+" | "+(e.type||""),m,y);y+=5;
+      doc.text((i+1)+". [À FAIRE] N° série: "+(e.serie||e.qrcode)+" | "+(e.emplacement||"N/C")+" | "+(e.type||""),m,y);y+=5;
     });
   }
   const pc=doc.internal.getNumberOfPages();
@@ -285,7 +302,7 @@ window.generatePDFReport=async()=>{
   }
   doc.save("Rapport_CFF_"+(currentSiteName||"site").replace(/\s+/g,"_")+"_"+now.toISOString().slice(0,10)+".pdf");
 };
-window.showExtincteurList=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const box=document.getElementById("ext-list-box");const sum=document.getElementById("ext-list-summary");const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;sum.innerText=nE+" extincteur(s) — "+nO+" contrôlé(s) — "+(nE-nO)+" restant(s)";if(!nE){box.innerHTML='<p style="color:#888">Aucun extincteur. Importez un CSV.</p>'}else{let h="";siteExtincteurs.forEach(e=>{const done=controlledQrcodes.has(e.qrcode);const badge=done?'<span class="badge badge-ok">Contrôlé</span>':'<span class="badge badge-ko">À faire</span>';h+=`<details><summary><b>${e.local||e.emplacement||"—"}</b> · ${e.type||"—"} ${badge}<br><small style="color:#666">${e.qrcode}</small></summary><div class="fiche">${ficheHTML(e)}</div></details>`});box.innerHTML=h}showStep("step-ext-list")};
+window.showExtincteurList=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const box=document.getElementById("ext-list-box");const sum=document.getElementById("ext-list-summary");const nE=siteExtincteurs.length,nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;sum.innerText=nE+" extincteur(s) — "+nO+" contrôlé(s) — "+(nE-nO)+" restant(s)";if(!nE){box.innerHTML='<p style="color:#888">Aucun extincteur. Importez un CSV.</p>'}else{let rows='<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#e9ecef"><th style="padding:6px;text-align:left">N° série / GIAI</th><th style="padding:6px;text-align:left">Emplacement</th><th style="padding:6px;text-align:left">Type</th><th style="padding:6px">Statut</th></tr></thead><tbody>';siteExtincteurs.forEach(e=>{const done=controlledQrcodes.has(e.qrcode);const badge=done?'<span class="badge badge-ok">Contrôlé</span>':'<span class="badge badge-ko">À faire</span>';rows+=`<tr style="border-bottom:1px solid #eee"><td style="padding:5px">${e.qrcode}</td><td style="padding:5px">${e.emplacement||"—"}</td><td style="padding:5px">${e.type||"—"}</td><td style="padding:5px;text-align:center">${badge}</td></tr>`});rows+="</tbody></table>";box.innerHTML=rows}showStep("step-ext-list")};
 window.resetPeriod=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;const nO=siteExtincteurs.filter(e=>controlledQrcodes.has(e.qrcode)).length;const msg="RESET PÉRIODE / NOUVEAU MOIS\n\nSite : "+currentSiteName+"\nProgression : "+nO+"/"+nE+"\nContrôles : "+fetchedControles.length+"\n\nSupprime TOUS les contrôles de ce site.\nLes extincteurs importés sont conservés.\n\nConfirmer ?";if(!confirm(msg))return;if(!confirm("Dernière confirmation : effacer "+fetchedControles.length+" contrôle(s) ?"))return;try{const snap=await getDocs(query(collection(db,"controles"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}alert("✅ Période réinitialisée.\n"+deleted+" contrôle(s) supprimé(s).\nProgression : 0/"+nE);await updateStatsAndData()}catch(e){alert("Erreur reset : "+e.message)}};
 window.deleteImportedExtincteurs=async()=>{if(!currentSiteId)return alert("Sélectionnez un site.");await updateStatsAndData();const nE=siteExtincteurs.length;if(!nE)return alert("Aucun extincteur importé sur ce site.");if(!confirm("SUPPRIMER TOUTE la liste des extincteurs de ce site ?\n\nSite : "+currentSiteName+"\n"+nE+" extincteur(s) seront TOUS effacés d'un coup.\n\nConfirmer ?"))return;if(!confirm("Dernière confirmation : supprimer les "+nE+" extincteur(s) du site \""+currentSiteName+"\" ?"))return;try{const snap=await getDocs(query(collection(db,"extincteurs"),where("siteId","==",currentSiteId)));const docs=snap.docs;let deleted=0;for(let i=0;i<docs.length;i+=500){const batch=writeBatch(db);const chunk=docs.slice(i,i+500);chunk.forEach(d=>batch.delete(d.ref));await batch.commit();deleted+=chunk.length}siteExtincteurs=[];alert("✅ Liste entièrement supprimée.\n"+deleted+" extincteur(s) effacés.\nVous pouvez réimporter un CSV propre.");await updateStatsAndData()}catch(e){alert("Erreur suppression : "+e.message)}};
 window.showDefects=()=>showStep("step-defects");

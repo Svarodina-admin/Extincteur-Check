@@ -1,7 +1,7 @@
 (async()=>{
   let b64='';
   for(let i=0;i<5;i++){
-    const r=await fetch('js_chunk_'+i+'.txt?t='+Date.now());
+    const r=await fetch('./chunk_'+i+'.txt?t='+Date.now());
     if(!r.ok){alert('Erreur chargement module '+i);return}
     b64+=await r.text();
   }

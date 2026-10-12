@@ -1,1 +1,1 @@
-/* Inspect360 v2026-10-12g pdf-pro - SEE ARTIFACT */
+PLACEHOLDER_WILL_FAIL

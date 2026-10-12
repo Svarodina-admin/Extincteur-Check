@@ -1,9 +1,9 @@
-/* Inspect360 v2026-10-12f pw+panel RESTORED */
+/* Inspect360 v2026-10-12h email-redirect */
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import{getFirestore,collection,addDoc,getDocs,getDoc,setDoc,query,where,deleteDoc,doc,writeBatch}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 const cfg={apiKey:"AIzaSyAbRHQOMAHVRybBxOgKj6Rl9jRgo-7Lk44",authDomain:"extincteur-check.firebaseapp.com",projectId:"extincteur-check",storageBucket:"extincteur-check.firebasestorage.app",messagingSenderId:"169428808632",appId:"1:169428808632:web:c862dec61a9ff01ed6954d"};
-const app=initializeApp(cfg),auth=getAuth(app),db=getFirestore(app),ADM="svarodina@protonmail.com";
+const app=initializeApp(cfg),auth=getAuth(app),db=getFirestore(app),ADM="svarodina@protonmail.com",ACTION_URL="https://svarodina-admin.github.io/Inspect-360/",ACS={url:ACTION_URL,handleCodeInApp:false};
 let U=null,P=null,sid=null,sname="",scan=null,cur=null,ctrls=[],pend=[],exts=[],done=new Set(),ff="all",fq="";
 let curEntId=null,curEntName="",entSites=[];
 const $=id=>document.getElementById(id);
@@ -14,9 +14,9 @@ const serie=e=>{const s=(e.serie||"").trim();return(s&&!/^en service$/i.test(s))
 const adm=()=>P&&P.role==="admin";
 const resp=()=>P&&(P.role==="responsable"||P.role==="admin");
 async function applyBrand(){const el=$("client-brand");if(!el)return;el.classList.add("hidden");el.textContent="";el.className="brand-badge";if(!P||!P.entrepriseId)return;try{const d=await getDoc(doc(db,"entreprises",P.entrepriseId));if(!d.exists())return;const nom=(d.data().nom||"").trim();const slug=(d.data().slug||"").toLowerCase();const isCff=/cff|sbb|ffs/i.test(nom)||/cff|sbb|ffs/.test(slug);if(isCff){el.textContent="SBB CFF FFS";el.className="brand-badge brand-cff"}else{el.textContent=nom.toUpperCase();el.className="brand-badge brand-ent"}el.classList.remove("hidden")}catch(e){}}
-async function sendWelcomeMail(email){try{await sendPasswordResetEmail(auth,email);return true}catch(e){console.warn(e);return false}}
-window.forgotPw=async()=>{const e=($("em").value||"").trim();if(!e)return alert("Saisissez d'abord votre e-mail");try{await sendPasswordResetEmail(auth,e);alert("E-mail envoyé à "+e)}catch(x){alert(x.message)}};
-window.requestNewPw=async()=>{if(!U||!U.email)return alert("Non connecté");if(!confirm("Envoyer un lien à "+U.email+" ?"))return;try{await sendPasswordResetEmail(auth,U.email);alert("E-mail envoyé")}catch(x){alert(x.message)}};
+async function sendWelcomeMail(email){try{await sendPasswordResetEmail(auth,email,ACS);return true}catch(e){console.warn(e);return false}}
+window.forgotPw=async()=>{const e=($("em").value||"").trim();if(!e)return alert("Saisissez d'abord votre e-mail");try{await sendPasswordResetEmail(auth,e,ACS);alert("E-mail envoyé à "+e+"\nCliquez le lien puis connectez-vous sur le site.")}catch(x){alert(x.message)}};
+window.requestNewPw=async()=>{if(!U||!U.email)return alert("Non connecté");if(!confirm("Envoyer un lien à "+U.email+" ?"))return;try{await sendPasswordResetEmail(auth,U.email,ACS);alert("E-mail envoyé.\nCliquez le lien puis reconnectez-vous.")}catch(x){alert(x.message)}};
 window.login=()=>{const e=$("em").value,p=$("pw").value;if(!e||!p)return alert("Email et mot de passe requis");signInWithEmailAndPassword(auth,e,p).catch(x=>alert(x.message))};
 window.logout=()=>signOut(auth);
 async function ensure(u){const r=doc(db,"users",u.uid);const s=await getDoc(r);if(s.exists()){P={uid:u.uid,...s.data()};return}const email=(u.email||"").toLowerCase();const role=email===ADM?"admin":"technicien";const pr={email:u.email,displayName:email.split("@")[0],role,entrepriseId:null,siteIds:[],active:true,createdAt:new Date().toISOString()};await setDoc(r,pr);P={uid:u.uid,...pr}}

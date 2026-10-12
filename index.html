@@ -1,1 +1,61 @@
-SEE_FILE
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspect360</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--primary:#c0392b;--success:#27ae60;--bg:#f0f2f5;--card:#fff;--info:#2980b9;--navy:#0a1f4d}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{background:var(--bg);color:#333;margin:0;padding:12px;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+.card{background:var(--card);border-radius:14px;padding:22px;width:100%;max-width:520px;box-shadow:0 6px 18px rgba(0,0,0,.08);margin-bottom:18px}
+.btn{width:100%;padding:13px;border:none;border-radius:9px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;margin-top:10px}
+.btn-primary{background:#3498db}.btn-secondary{background:#7f8c8d}.btn-success{background:var(--success)}.btn-danger{background:var(--primary)}.btn-info{background:var(--info)}
+.hidden{display:none!important}
+input,select,textarea{width:100%;padding:11px;margin:6px 0 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:15px}
+.header-logo{text-align:center;margin-bottom:10px}
+.logo-company{font-size:22px;font-weight:800;color:var(--navy)}
+.logo-company span{color:#c9a227;font-size:14px;display:block;margin-top:2px}
+.logo-cff-bar{display:inline-block;background:#E30613;border-radius:4px;padding:8px 20px;color:#fff;font-weight:800;letter-spacing:2px}
+.subtitle{text-align:center;color:#666;font-size:13px;margin-top:6px}
+.footer-credit{text-align:center;font-size:11px;color:#888;margin-top:16px;padding-top:12px;border-top:1px solid #eee}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.stat-box{background:#eef1f5;padding:10px 6px;border-radius:10px;text-align:center}
+.stat-number{font-size:20px;font-weight:700;margin-top:2px}
+</style>
+</head>
+<body>
+<div id="step-auth" class="card">
+<div class="header-logo"><div class="logo-company">SVARODINA<span>& CO</span></div>
+<div class="subtitle">Inspection</div></div>
+<h3 style="text-align:center">Connexion</h3>
+<label>Email :</label><input type="email" id="auth-email" placeholder="votre@email.com">
+<label>Mot de passe :</label><input type="password" id="auth-password" placeholder="******">
+<button class="btn btn-primary" id="btn-login" onclick="login()">Se connecter</button>
+<p style="text-align:center;margin-top:14px;font-size:13px;color:#888">Les comptes sont cr&eacute;&eacute;s uniquement par l'administrateur Svarodina & CO.</p>
+<div class="footer-credit">Application cr&eacute;&eacute;e par Svarodina & CO</div>
+</div>
+<div id="step-scan" class="card hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<span id="user-email-display" style="font-size:12px;color:#666"></span>
+<button onclick="logout()" style="padding:5px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">D&eacute;connexion</button>
+</div>
+<div class="header-logo"><div class="logo-cff-bar">SBB CFF FFS</div><div class="subtitle">Inspection</div></div>
+<p style="background:#e8f4fd;padding:12px;border-radius:8px;font-size:13px">Application en cours de d&eacute;ploiement complet. Pour restaurer toutes les fonctions, remplacez <code>index.html</code> sur GitHub par le fichier fourni dans le chat (<b>index_nosignup.html</b>).</p>
+<button class="btn btn-secondary" onclick="location.reload()">Rafra&icirc;chir</button>
+<div class="footer-credit">Application cr&eacute;&eacute;e par Svarodina & CO</div>
+</div>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+const firebaseConfig={apiKey:"AIzaSyAbRHQOMAHVRybBxOgKj6Rl9jRgo-7Lk44",authDomain:"extincteur-check.firebaseapp.com",projectId:"extincteur-check",storageBucket:"extincteur-check.firebasestorage.app",messagingSenderId:"169428808632",appId:"1:169428808632:web:c862dec61a9ff01ed6954d"};
+const app=initializeApp(firebaseConfig),auth=getAuth(app);
+window.login=()=>{const e=document.getElementById("auth-email").value,p=document.getElementById("auth-password").value;if(!e||!p)return alert("Email et mot de passe requis.");signInWithEmailAndPassword(auth,e,p).catch(x=>alert(x.message));};
+window.logout=()=>signOut(auth);
+onAuthStateChanged(auth,u=>{if(u){document.getElementById("user-email-display").innerText=u.email;document.getElementById("step-auth").classList.add("hidden");document.getElementById("step-scan").classList.remove("hidden");}else{document.getElementById("step-auth").classList.remove("hidden");document.getElementById("step-scan").classList.add("hidden");}});
+</script>
+</body>
+</html>

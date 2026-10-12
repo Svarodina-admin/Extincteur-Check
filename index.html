@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inspect360</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23E30613'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='16' fill='%23fff'%3ES%3C/text%3E%3C/svg%3E">
-</head>
-<body>
-<p style="font-family:sans-serif;padding:20px;max-width:480px;margin:40px auto">
-<strong>Inspect360</strong><br><br>
-Pour activer toutes les fonctions, sur GitHub ouvrez le fichier
-<code>Inspect360_ADMIN_COMPLETE.html</code> t&eacute;l&eacute;charg&eacute; dans le chat Grok,
-puis dans le d&eacute;p&ocirc;t <b>Extincteur-Check</b> : 
-<ol><li>index.html &rarr; Edit</li><li>Coller tout le contenu</li><li>Commit</li></ol>
-Puis Ctrl+Shift+R sur l&apos;app.
-<br><br>
-Compte admin : <code>Svarodina@protonmail.com</code>
-</p>
-</body>
-</html>
+</head><body>
+<p id="st" style="font-family:sans-serif;text-align:center;margin-top:40px">Chargement Inspect360…</p>
+<script>
+(async function(){
+  const n = 6;
+  let b64 = '';
+  for(let i=0;i<n;i++){
+    const r = await fetch('chunk_'+i+'.txt?t='+Date.now());
+    if(!r.ok){document.getElementById('st').textContent='Erreur chunk '+i;return}
+    b64 += await r.text();
+  }
+  const html = decodeURIComponent(escape(atob(b64)));
+  document.open();
+  document.write(html);
+  document.close();
+})();
+</script>
+</body></html>

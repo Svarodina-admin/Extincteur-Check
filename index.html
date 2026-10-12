@@ -36,6 +36,8 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 .steps{display:flex;gap:6px;margin-bottom:12px}
 .step{flex:1;text-align:center;padding:8px 4px;border-radius:8px;font-size:12px;font-weight:600;background:#eef1f5;color:#666}
 .step.on{background:#0a1f4d;color:#fff}.step.done{background:#d4edda;color:#155724}
+.brand-badge{display:inline-block;border-radius:4px;padding:8px 18px;color:#fff;font-weight:800;letter-spacing:1px;margin-top:6px}
+.brand-cff{background:#E30613}.brand-ent{background:#0a1f4d}
 </style></head><body>
 <div id="a" class="card">
 <div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:280px;width:90%;height:auto;display:block;margin:0 auto"></div>
@@ -43,40 +45,40 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <label>Email</label><input type="email" id="em" placeholder="votre@email.com">
 <label>Mot de passe</label><input type="password" id="pw" placeholder="******">
 <button class="btn bp" onclick="login()">Se connecter</button>
-<p style="text-align:center;margin-top:12px;font-size:13px;color:#888">Comptes créés uniquement par l'administrateur Svarodina & CO.</p>
-<div class="ft">Application créée par Svarodina & CO</div>
+<p style="text-align:center;margin-top:12px;font-size:13px;color:#888">Comptes créés uniquement par l'administrateur Svarodina &amp; CO.</p>
+<div class="ft">Application créée par Svarodina &amp; CO</div>
 </div>
 <div id="ad" class="card hidden">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
 <span id="ae" style="font-size:12px;color:#666"></span><span class="rb">admin</span>
 <button onclick="logout()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button>
 </div>
-<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub">Administration</div></div>
+<div class="hl"><div class="lc">SVARODINA<span>&amp; CO</span></div><div class="sub">Administration</div></div>
 <button class="btn bp" onclick="showNewEnt()">+ Créer une nouvelle entreprise</button>
 <div class="as" style="margin-top:16px"><h3>Entreprises</h3><div id="ae2"></div></div>
-<div class="ft">Application créée par Svarodina & CO</div>
+<div class="ft">Application créée par Svarodina &amp; CO</div>
 </div>
 <div id="ad-new" class="card hidden">
-<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub">Nouvelle entreprise</div></div>
+<div class="hl"><div class="lc">SVARODINA<span>&amp; CO</span></div><div class="sub">Nouvelle entreprise</div></div>
 <div class="steps"><div class="step on">1. Entreprise</div><div class="step">2. Sites</div><div class="step">3. Utilisateurs</div></div>
 <label>Nom de l'entreprise *</label>
 <input id="en" placeholder="Ex: CFF">
 <button class="btn bs" onclick="mkEnt()">Créer et continuer</button>
 <button class="btn b2" onclick="backAdmin()">Annuler</button>
-<div class="ft">Application créée par Svarodina & CO</div>
+<div class="ft">Application créée par Svarodina &amp; CO</div>
 </div>
 <div id="ad-sites" class="card hidden">
-<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub" id="wiz-title">Sites</div></div>
+<div class="hl"><div class="lc">SVARODINA<span>&amp; CO</span></div><div class="sub" id="wiz-title">Sites</div></div>
 <div class="steps"><div class="step done">1. Entreprise</div><div class="step on">2. Sites</div><div class="step">3. Utilisateurs</div></div>
 <div class="as"><h3>Sites de l'entreprise</h3><div id="wiz-sites"></div>
-<label>Ajouter un site</label><input id="sn" placeholder="Ex: GEAP, Nyon, Gland…">
+<label>Ajouter un site</label><input id="sn" placeholder="Ex: GEAP, Nyon…">
 <button class="btn bs" onclick="mkSite()">Ajouter le site</button></div>
 <button class="btn bp" onclick="goWizUsers()">Continuer → Utilisateurs</button>
 <button class="btn b2" onclick="openEntreprise(curEntId,curEntName)">Passer / Voir l'entreprise</button>
-<div class="ft">Application créée par Svarodina & CO</div>
+<div class="ft">Application créée par Svarodina &amp; CO</div>
 </div>
 <div id="ad-users" class="card hidden">
-<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub" id="wiz-title2">Utilisateurs</div></div>
+<div class="hl"><div class="lc">SVARODINA<span>&amp; CO</span></div><div class="sub" id="wiz-title2">Utilisateurs</div></div>
 <div class="steps"><div class="step done">1. Entreprise</div><div class="step done">2. Sites</div><div class="step on">3. Utilisateurs</div></div>
 <div class="as"><h3>Créer un utilisateur</h3>
 <input id="ue2" type="email" placeholder="Adresse e-mail *">
@@ -89,14 +91,14 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <button class="btn bp" onclick="mkUser()">Créer l'utilisateur</button></div>
 <div class="as"><h3>Utilisateurs déjà créés</h3><div id="wiz-users"></div></div>
 <button class="btn bs" onclick="openEntreprise(curEntId,curEntName)">Terminer</button>
-<div class="ft">Application créée par Svarodina & CO</div>
+<div class="ft">Application créée par Svarodina &amp; CO</div>
 </div>
 <div id="ad-ent" class="card hidden">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
 <button onclick="backAdmin()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">↩ Entreprises</button>
 <button onclick="logout()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button>
 </div>
-<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub" id="ent-title">Entreprise</div></div>
+<div class="hl"><div class="lc">SVARODINA<span>&amp; CO</span></div><div class="sub" id="ent-title">Entreprise</div></div>
 <div class="as"><h3>Sites</h3><div id="ent-sites"></div>
 <label>Ajouter un site</label><input id="sn2" placeholder="Nom du site">
 <button class="btn bs" onclick="mkSiteFromDetail()">Ajouter</button></div>
@@ -110,15 +112,15 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <select id="uroleb"><option value="responsable">Responsable</option><option value="technicien">Technicien</option></select>
 <div id="user-sites-check2" class="cg"></div>
 <button class="btn bp" onclick="mkUserFromDetail()">Créer</button>
-<p style="font-size:11px;color:#888">Après création Auth, reconnectez-vous admin si besoin.</p></div>
+<p style="font-size:11px;color:#888">Un e-mail de connexion est envoyé à la création.</p></div>
 <button class="btn bd" onclick="delEntreprise()">Supprimer l'entreprise</button>
-<div class="ft">Application créée par Svarodina & CO</div>
+<div class="ft">Application créée par Svarodina &amp; CO</div>
 </div>
 <div id="sc" class="card hidden">
 <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
 <span id="ue" style="font-size:12px;color:#666"></span><span class="rb" id="ur"></span>
 <button onclick="logout()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button></div>
-<div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:220px;width:75%;height:auto;display:block;margin:0 auto 6px"><div class="cff">SBB CFF FFS</div></div>
+<div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:220px;width:75%;height:auto;display:block;margin:0 auto 6px"><div id="client-brand" class="brand-badge hidden"></div></div>
 <h2 style="font-size:16px;margin:8px 0">Site</h2>
 <select id="ss" onchange="loadSite()"><option value="">-- Choisir --</option></select>
 <div id="sd" class="hidden">
@@ -139,7 +141,7 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <button class="btn b2" onclick="showList()">Liste</button>
 <button class="btn hidden" style="background:#6c3483" id="br" onclick="resetP()">Reset période</button>
 <button class="btn bd hidden" id="bda" onclick="delAll()">Supprimer liste</button></div>
-<div class="ft">Application créée par Svarodina & CO</div>
+<div class="ft">Application créée par Svarodina &amp; CO</div>
 </div>
 <div id="ls" class="card hidden"><h2 style="margin-top:0">Liste</h2>
 <input type="search" id="lq" placeholder="Recherche…" oninput="filt()">
@@ -167,5 +169,5 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <label class="cl"><input type="checkbox" id="sgc"> Je certifie les contrôles</label>
 <button class="btn bp" onclick="doPdf()">Générer</button>
 <button class="btn b2" onclick="back()">Annuler</button></div>
-<script type="module" src="js/app.js?v=20261012d"></script>
+<script type="module" src="js/app.js?v=20261012e"></script>
 </body></html>

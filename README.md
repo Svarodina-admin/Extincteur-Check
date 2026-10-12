@@ -1,41 +1,39 @@
-# Inspect360 — Contrôle extincteurs CFF
+# Inspect360
 
-Application de contrôle d'extincteurs (scan GIAI, import CSV, rapports PDF).
+Plateforme web mobile (PWA) de contrôle et d’inspection d’équipements — scan QR / GIAI, import de listes, rapports PDF, gestion multi-entreprises.
+
+> Module actuel : **extincteurs** (contrôle incendie). L’architecture est conçue pour accueillir d’autres types d’équipements.
 
 ## Structure
 
 ```
 index.html          Interface
-css/app.css         Styles
-js/config.js        Firebase + constantes
-js/app.js           Logique métier
+js/app.js           Logique métier + Firebase
+logo-inspect360.svg Logo application
 ```
 
 ## Rôles
 
 | Rôle | Compte | Droits |
 |------|--------|--------|
-| **admin** | svarodina@protonmail.com | Entreprises, users, tout |
-| **responsable** | thibaut.petric@sbb.ch | Sites + users de son entreprise, PDF, reset |
+| **admin** | svarodina@protonmail.com | Entreprises, sites, utilisateurs |
+| **responsable** | créé par admin | Sites de son entreprise, PDF, reset |
 | **technicien** | créé par admin | Scan, contrôle, édition ligne |
-| **lecteur** | créé par admin | Lecture seule |
 
 ## Fonctionnalités
 
-- Recherche multi-critères + filtres À faire / Contrôlés
-- Saisie manuelle N° série + bip confirmation
-- Rôles, entreprises, sites, attribution users
-- Validation PDF (case + nom technicien)
-- Branding CFF conditionnel
-- Maintenance légale 3 ans (vert / orange / rouge)
+- Gestion entreprises → sites → utilisateurs
+- Scan QR / saisie manuelle N° série
+- Import CSV, export Excel / PDF
+- Recherche et filtres À faire / Contrôlés
+- Branding client (ex. CFF) côté technicien
 
 ## Déploiement
 
-Servir à la racine (GitHub Pages / Firebase Hosting). Modules ES nécessitent HTTP (pas file://).
+GitHub Pages (branche `main`) ou Firebase Hosting. Modules ES : accès en HTTP (pas `file://`).
 
 ## Bootstrap admin
 
-1. Compte Auth `svarodina@protonmail.com`
-2. Connexion → profil admin auto-créé
-3. Créer entreprise CFF (slug: cff)
-4. Créer users agents `@sbb.ch`
+1. Connexion `svarodina@protonmail.com`
+2. Créer une entreprise + sites
+3. Créer les utilisateurs et leur attribuer sites + rôle

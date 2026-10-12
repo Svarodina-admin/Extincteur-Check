@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" width="520" height="120">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2bb673"/>
+      <stop offset="50%" style="stop-color:#1a9bb8"/>
+      <stop offset="100%" style="stop-color:#0d6e8a"/>
+    </linearGradient>
+  </defs>
+  <circle cx="55" cy="60" r="48" fill="none" stroke="url(#g)" stroke-width="4"/>
+  <circle cx="55" cy="60" r="38" fill="none" stroke="url(#g)" stroke-width="2" opacity=".5"/>
+  <ellipse cx="55" cy="55" rx="14" ry="10" fill="#0d3a5c"/>
+  <circle cx="55" cy="55" r="5" fill="#1a9bb8"/>
+  <circle cx="57" cy="53" r="2" fill="#fff"/>
+  <path d="M38 62 L50 74 L78 42" fill="none" stroke="#2bb673" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="120" y="72" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="42" letter-spacing="2">
+    <tspan fill="#0d3a5c">INSPECT</tspan><tspan fill="#1a9bb8">360</tspan>
+  </text>
+</svg>

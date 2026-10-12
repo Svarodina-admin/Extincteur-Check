@@ -29,23 +29,82 @@ body{background:var(--bg);color:#333;margin:0;padding:12px;display:flex;flex-dir
 .me{background:#e8f4fd;border:1px solid #b8daff;border-radius:10px;padding:10px;margin:8px 0}
 .fb{display:flex;gap:6px;margin:8px 0}.fb button{flex:1;padding:6px;font-size:12px;border:none;border-radius:6px;background:#7f8c8d;color:#fff;cursor:pointer}.fb button.on{background:#3498db}
 hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;border-collapse:collapse;font-size:12px}table.l th{background:#e9ecef;padding:4px;text-align:left}table.l td{padding:3px;border-bottom:1px solid #eee}
+.ent-btn{width:100%;text-align:left;padding:14px;margin:6px 0;border:1px solid #dee2e6;border-radius:10px;background:#fff;cursor:pointer;font-size:15px;font-weight:600;color:#0a1f4d}
+.ent-btn:hover{background:#e8f0fe;border-color:#1a73e8}
+.site-chip{display:inline-block;background:#eef1f5;padding:4px 10px;border-radius:12px;font-size:12px;margin:2px}
 </style></head><body>
-<div id="a" class="card"><div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:280px;width:90%;height:auto;display:block;margin:0 auto"></div>
+<div id="a" class="card">
+<div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:280px;width:90%;height:auto;display:block;margin:0 auto"></div>
 <h3 style="text-align:center">Connexion</h3>
 <label>Email</label><input type="email" id="em" placeholder="votre@email.com">
 <label>Mot de passe</label><input type="password" id="pw" placeholder="******">
 <button class="btn bp" onclick="login()">Se connecter</button>
 <p style="text-align:center;margin-top:12px;font-size:13px;color:#888">Comptes créés uniquement par l'administrateur Svarodina & CO.</p>
-<div class="ft">Application créée par Svarodina & CO</div></div>
+<div class="ft">Application créée par Svarodina & CO</div>
+</div>
+<div id="ad" class="card hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+<span id="ae" style="font-size:12px;color:#666"></span>
+<span class="rb">admin</span>
+<button onclick="logout()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button>
+</div>
+<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub">Administration</div></div>
+<div class="as">
+<h3>Nouvelle entreprise</h3>
+<label>Nom de l'entreprise</label>
+<input id="en" placeholder="Ex: CFF">
+<label>Premier site</label>
+<input id="esn" placeholder="Ex: GEAP">
+<button class="btn bs" onclick="mkEnt()">Créer l'entreprise</button>
+</div>
+<div class="as">
+<h3>Entreprises</h3>
+<p style="font-size:12px;color:#666;margin:0 0 8px">Cliquez sur une entreprise pour gérer ses sites et utilisateurs.</p>
+<div id="ae2"></div>
+</div>
+<div class="ft">Application créée par Svarodina & CO</div>
+</div>
+<div id="ad-ent" class="card hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<button onclick="backAdmin()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">↩ Entreprises</button>
+<button onclick="logout()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button>
+</div>
+<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub" id="ent-title">Entreprise</div></div>
+<div class="as">
+<h3>Sites de l'entreprise</h3>
+<div id="ent-sites"></div>
+<label>Ajouter un site</label>
+<input id="sn" placeholder="Nom du site (ex: Nyon)">
+<button class="btn bs" onclick="mkSite()">Ajouter le site</button>
+</div>
+<div class="as">
+<h3>Utilisateurs</h3>
+<div id="au" style="max-height:260px;overflow:auto;margin-bottom:10px"></div>
+<hr>
+<p style="font-size:13px;font-weight:600;margin:0 0 6px">Créer un utilisateur</p>
+<input id="ue2" type="email" placeholder="prenom.nom@sbb.ch">
+<input id="up" placeholder="Mot de passe temporaire (min 6)">
+<input id="un" placeholder="Nom affiché">
+<label>Rôle</label>
+<select id="urole">
+<option value="responsable">Responsable de site</option>
+<option value="technicien">Technicien</option>
+</select>
+<label>Sites autorisés</label>
+<div id="user-sites-check" class="cg"></div>
+<button class="btn bp" onclick="mkUser()">Créer l'utilisateur</button>
+<p style="font-size:11px;color:#888">Après création, reconnectez-vous avec le compte admin.</p>
+</div>
+<div class="ft">Application créée par Svarodina & CO</div>
+</div>
 <div id="sc" class="card hidden">
 <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
 <span id="ue" style="font-size:12px;color:#666"></span><span class="rb" id="ur"></span>
-<button onclick="logout()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button></div>
-<div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:220px;width:75%;height:auto;display:block;margin:0 auto 6px"><div class="cff">SBB CFF FFS</div></div>
-<button class="btn bw hidden" id="ba" onclick="goAdmin()">⚙️ Administration</button>
+<button onclick="logout()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button>
+</div>
+<div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:220px;width:75%;height:auto;display:block;margin:0 auto 6px"><div class="cff" id="client-brand">SBB CFF FFS</div></div>
 <h2 style="font-size:16px;margin:8px 0">Site</h2>
 <select id="ss" onchange="loadSite()"><option value="">-- Choisir --</option></select>
-<button class="btn b2 hidden" id="bs" onclick="show('ns')">➕ Site</button>
 <div id="sd" class="hidden">
 <label style="font-weight:600;font-size:13px">Technicien</label><input type="text" id="tn" placeholder="Nom Prénom"><hr>
 <div class="sg"><div class="sb"><div style="font-size:11px">Progression</div><div id="sp" class="sn">0/0</div></div>
@@ -59,49 +118,12 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <div id="ci"><label style="font-weight:600;font-size:13px;display:block;margin-top:8px">Import CSV</label>
 <input type="file" id="cf" accept=".csv,.txt" onchange="prevCSV(event)">
 <div id="cps" class="hidden"><p id="ccl" style="font-size:13px;font-weight:600"></p>
-<button class="btn bs" id="bvc" onclick="impCSV()">✅ Valider</button><button class="btn b2" onclick="canCSV()">Annuler</button></div></div>
-<hr><button class="btn bi" onclick="expX()">📊 Excel</button><button class="btn bp" onclick="pdf()">📄 PDF</button>
-<button class="btn b2" onclick="showList()">📋 Liste</button>
-<button class="btn hidden" style="background:#6c3483" id="br" onclick="resetP()">🔄 Reset période</button>
-<button class="btn bd hidden" id="bda" onclick="delAll()">🗑️ Supprimer liste</button></div>
-<div class="ft">Application créée par Svarodina & CO</div></div>
-<div id="ad" class="card hidden">
-<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub">Administration</div></div>
-<p style="font-size:13px;text-align:center">Compte : <b id="ae"></b></p>
-<div class="as">
-<h3>1. Nouvelle entreprise</h3>
-<label>Nom de l'entreprise</label>
-<input id="en" placeholder="Ex: CFF, Migros…">
-<label>Nom du premier site</label>
-<input id="esn" placeholder="Ex: GEAP, Nyon…">
-<button class="btn bs" onclick="mkEnt()">Créer l'entreprise + site</button>
+<button class="btn bs" id="bvc" onclick="impCSV()">Valider</button><button class="btn b2" onclick="canCSV()">Annuler</button></div></div>
+<hr><button class="btn bi" onclick="expX()">Excel</button><button class="btn bp" onclick="pdf()">PDF</button>
+<button class="btn b2" onclick="showList()">Liste</button>
+<button class="btn hidden" style="background:#6c3483" id="br" onclick="resetP()">Reset période</button>
+<button class="btn bd hidden" id="bda" onclick="delAll()">Supprimer liste</button>
 </div>
-<div class="as">
-<h3>2. Entreprises & sites</h3>
-<div id="ae2"></div>
-<label>Ajouter un site à</label>
-<select id="se"></select>
-<input id="sn" placeholder="Nom du nouveau site">
-<button class="btn bs" onclick="mkSite()">Ajouter le site</button>
-</div>
-<div class="as">
-<h3>3. Utilisateurs par entreprise</h3>
-<label>Choisir l'entreprise</label>
-<select id="ue3" onchange="loadUsersForEnt()"></select>
-<div id="au" style="max-height:220px;overflow:auto;margin:10px 0"></div>
-<hr>
-<p style="font-size:13px;font-weight:600;margin:0 0 6px">Créer un utilisateur</p>
-<input id="ue2" type="email" placeholder="email@entreprise.ch">
-<input id="up" placeholder="Mot de passe temporaire (min 6)">
-<input id="un" placeholder="Nom affiché">
-<select id="urole">
-<option value="technicien">Technicien</option>
-<option value="responsable">Responsable de site</option>
-</select>
-<button class="btn bp" onclick="mkUser()">Créer l'utilisateur</button>
-<p style="font-size:11px;color:#888">Après création d'un utilisateur, reconnectez-vous avec le compte admin.</p>
-</div>
-<button class="btn b2" onclick="back()">↩ Retour</button>
 <div class="ft">Application créée par Svarodina & CO</div>
 </div>
 <div id="ls" class="card hidden"><h2 style="margin-top:0">Liste</h2>
@@ -109,14 +131,11 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <div class="fb"><button class="on" data-f="all" onclick="setF('all')">Tous</button><button data-f="todo" onclick="setF('todo')">À faire</button><button data-f="done" onclick="setF('done')">OK</button></div>
 <p id="lsum" style="font-size:13px"></p><div id="lbox" style="max-height:340px;overflow:auto"></div>
 <button class="btn b2" onclick="back()">↩ Retour</button></div>
-<div id="ns" class="card hidden"><h2>Nouveau site</h2>
-<input id="nsn" placeholder="Nom"><button class="btn bs" onclick="mkSite2()">Créer</button>
-<button class="btn b2" onclick="back()">↩</button></div>
 <div id="ch" class="card hidden"><h2 style="margin-top:0">Fiche</h2><div id="ed"></div>
 <div id="uf" class="hidden"><input id="us" readonly><input id="uep" placeholder="Emplacement"><input id="ut" placeholder="Type">
-<button class="btn bi" onclick="addUnk()">➕ Ajouter</button></div>
-<button class="btn bs" onclick="saveC('CONFORME')">✅ CONFORME</button>
-<button class="btn bd" onclick="show('df')">⚠️ NON CONFORME</button>
+<button class="btn bi" onclick="addUnk()">Ajouter</button></div>
+<button class="btn bs" onclick="saveC('CONFORME')">CONFORME</button>
+<button class="btn bd" onclick="show('df')">NON CONFORME</button>
 <button class="btn b2" onclick="back()">↩</button></div>
 <div id="df" class="card hidden"><h2>Défauts</h2><div class="cg">
 <label class="cl"><input type="checkbox" name="d" value="Plomb manquant"> Plombage</label>
@@ -126,12 +145,12 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <label class="cl"><input type="checkbox" name="d" value="Corrosion"> Corrosion</label>
 <label class="cl"><input type="checkbox" name="d" value="Autre"> Autre</label></div>
 <textarea id="dn" placeholder="Note"></textarea>
-<button class="btn bd" onclick="saveC('NON CONFORME')">💾 Enregistrer</button>
+<button class="btn bd" onclick="saveC('NON CONFORME')">Enregistrer</button>
 <button class="btn b2" onclick="back()">↩</button></div>
 <div id="sg" class="card hidden"><h2>Validation PDF</h2>
 <input id="sgn" placeholder="Nom technicien">
 <label class="cl"><input type="checkbox" id="sgc"> Je certifie les contrôles</label>
-<button class="btn bp" onclick="doPdf()">📄 Générer</button>
+<button class="btn bp" onclick="doPdf()">Générer</button>
 <button class="btn b2" onclick="back()">Annuler</button></div>
-<script type="module" src="js/app.js?v=20261012b"></script>
+<script type="module" src="js/app.js?v=20261012c"></script>
 </body></html>

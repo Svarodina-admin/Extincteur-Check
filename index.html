@@ -1,1 +1,111 @@
-LOGO_UPDATE
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inspect360 — Contrôle extincteurs</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--p:#c0392b;--s:#27ae60;--bg:#f0f2f5;--c:#fff;--i:#2980b9;--n:#0a1f4d;--w:#e67e22}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{background:var(--bg);color:#333;margin:0;padding:12px;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+.card{background:var(--c);border-radius:14px;padding:20px;width:100%;max-width:540px;box-shadow:0 6px 18px rgba(0,0,0,.08);margin-bottom:16px}
+.btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;margin-top:8px}
+.bs{background:var(--s)}.bd{background:var(--p)}.b2{background:#7f8c8d}.bp{background:#3498db}.bi{background:var(--i)}.bw{background:var(--w)}
+.hidden{display:none!important}input,select,textarea{width:100%;padding:10px;margin:4px 0 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:15px}
+.hl{text-align:center;margin-bottom:8px}.lc{font-size:20px;font-weight:800;color:var(--n)}.lc span{color:#c9a227;font-size:13px;display:block}
+.cff{display:inline-block;background:#E30613;border-radius:4px;padding:8px 18px;color:#fff;font-weight:800;letter-spacing:2px}
+.sub{text-align:center;color:#666;font-size:13px;margin-top:4px}.ft{text-align:center;font-size:11px;color:#888;margin-top:14px;padding-top:10px;border-top:1px solid #eee}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.sb{background:#eef1f5;padding:8px;border-radius:10px;text-align:center}.sn{font-size:18px;font-weight:700}
+.as{background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:12px;margin:10px 0}.as h3{margin:0 0 8px;font-size:14px}
+.rb{font-size:11px;background:#e8f0fe;color:#1a73e8;padding:2px 8px;border-radius:10px}
+.cg{display:flex;flex-direction:column;gap:6px;margin:8px 0}.cl{display:flex;align-items:center;gap:8px;font-size:13px;background:#f1f3f5;padding:8px;border-radius:8px}
+#ed{background:#eef2f7;padding:12px;border-radius:10px;margin-bottom:12px;border-left:4px solid var(--i)}
+.sx{background:linear-gradient(135deg,#0a1f4d,#1a3a6b);color:#fff;border-radius:12px;padding:14px;text-align:center;margin-bottom:12px}.sv{font-size:20px;font-weight:800;word-break:break-all}
+.fr{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
+.bg{display:inline-block;padding:2px 7px;border-radius:6px;font-size:12px;font-weight:600}.ok{background:#d4edda;color:#155724}
+.me{background:#e8f4fd;border:1px solid #b8daff;border-radius:10px;padding:10px;margin:8px 0}
+.fb{display:flex;gap:6px;margin:8px 0}.fb button{flex:1;padding:6px;font-size:12px;border:none;border-radius:6px;background:#7f8c8d;color:#fff;cursor:pointer}.fb button.on{background:#3498db}
+hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;border-collapse:collapse;font-size:12px}table.l th{background:#e9ecef;padding:4px;text-align:left}table.l td{padding:3px;border-bottom:1px solid #eee}
+</style></head><body>
+<div id="a" class="card"><div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:280px;width:90%;height:auto;display:block;margin:0 auto"></div>
+<h3 style="text-align:center">Connexion</h3>
+<label>Email</label><input type="email" id="em" placeholder="votre@email.com">
+<label>Mot de passe</label><input type="password" id="pw" placeholder="******">
+<button class="btn bp" onclick="login()">Se connecter</button>
+<p style="text-align:center;margin-top:12px;font-size:13px;color:#888">Comptes créés uniquement par l'administrateur Svarodina & CO.</p>
+<div class="ft">Application créée par Svarodina & CO</div></div>
+<div id="sc" class="card hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+<span id="ue" style="font-size:12px;color:#666"></span><span class="rb" id="ur"></span>
+<button onclick="logout()" style="padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Déconnexion</button></div>
+<div class="hl"><img src="logo-inspect360.svg" alt="Inspect360" style="max-width:220px;width:75%;height:auto;display:block;margin:0 auto 6px"><div class="cff">SBB CFF FFS</div></div>
+<button class="btn bw hidden" id="ba" onclick="goAdmin()">⚙️ Administration</button>
+<h2 style="font-size:16px;margin:8px 0">Site</h2>
+<select id="ss" onchange="loadSite()"><option value="">-- Choisir --</option></select>
+<button class="btn b2 hidden" id="bs" onclick="show('ns')">➕ Site</button>
+<div id="sd" class="hidden">
+<label style="font-weight:600;font-size:13px">Technicien</label><input type="text" id="tn" placeholder="Nom Prénom"><hr>
+<div class="sg"><div class="sb"><div style="font-size:11px">Progression</div><div id="sp" class="sn">0/0</div></div>
+<div class="sb"><div style="font-size:11px">Contrôles</div><div id="st" class="sn">0</div></div>
+<div class="sb" style="color:var(--s)"><div style="font-size:11px">OK</div><div id="sc2" class="sn">0</div></div>
+<div class="sb" style="color:var(--p)"><div style="font-size:11px">Défauts</div><div id="sdf" class="sn">0</div></div></div>
+<p id="pm" class="hidden" style="padding:8px;border-radius:8px;font-size:13px;text-align:center;background:#e8f4fd"></p>
+<h3 style="font-size:14px">Scanner</h3><div id="reader"></div>
+<div class="me"><label style="font-weight:600;font-size:13px">Saisie manuelle</label>
+<div style="display:flex;gap:8px"><input id="mc" placeholder="N° série / GIAI" style="margin:0;flex:1"><button class="btn bi" style="width:auto;margin:0;padding:10px 14px" onclick="man()">OK</button></div></div>
+<div id="ci"><label style="font-weight:600;font-size:13px;display:block;margin-top:8px">Import CSV</label>
+<input type="file" id="cf" accept=".csv,.txt" onchange="prevCSV(event)">
+<div id="cps" class="hidden"><p id="ccl" style="font-size:13px;font-weight:600"></p>
+<button class="btn bs" id="bvc" onclick="impCSV()">✅ Valider</button><button class="btn b2" onclick="canCSV()">Annuler</button></div></div>
+<hr><button class="btn bi" onclick="expX()">📊 Excel</button><button class="btn bp" onclick="pdf()">📄 PDF</button>
+<button class="btn b2" onclick="showList()">📋 Liste</button>
+<button class="btn hidden" style="background:#6c3483" id="br" onclick="resetP()">🔄 Reset période</button>
+<button class="btn bd hidden" id="bda" onclick="delAll()">🗑️ Supprimer liste</button></div>
+<div class="ft">Application créée par Svarodina & CO</div></div>
+<div id="ad" class="card hidden"><h2 style="margin-top:0">⚙️ Administration</h2>
+<p style="font-size:13px">Compte : <b id="ae"></b></p>
+<div class="as"><h3>Entreprises</h3><div id="ae2"></div>
+<input id="en" placeholder="Nom (ex: CFF)"><input id="es" placeholder="Slug (ex: cff)">
+<button class="btn bs" onclick="mkEnt()">Créer entreprise</button></div>
+<div class="as"><h3>Sites</h3><select id="se"></select><input id="sn" placeholder="Nom site">
+<button class="btn bs" onclick="mkSite()">Créer site</button></div>
+<div class="as"><h3>Utilisateurs</h3><div id="au" style="max-height:160px;overflow:auto;margin-bottom:8px"></div>
+<input id="ue2" type="email" placeholder="email@sbb.ch"><input id="up" placeholder="mot de passe (min 6)">
+<input id="un" placeholder="Nom affiché">
+<select id="urole"><option value="technicien">Technicien</option><option value="responsable">Responsable</option><option value="lecteur">Lecteur</option></select>
+<select id="ue3"></select><button class="btn bp" onclick="mkUser()">Créer utilisateur</button>
+<p style="font-size:11px;color:#888">Après création, reconnectez-vous en admin.</p></div>
+<button class="btn b2" onclick="back()">↩ Retour</button></div>
+<div id="ls" class="card hidden"><h2 style="margin-top:0">Liste</h2>
+<input type="search" id="lq" placeholder="Recherche…" oninput="filt()">
+<div class="fb"><button class="on" data-f="all" onclick="setF('all')">Tous</button><button data-f="todo" onclick="setF('todo')">À faire</button><button data-f="done" onclick="setF('done')">OK</button></div>
+<p id="lsum" style="font-size:13px"></p><div id="lbox" style="max-height:340px;overflow:auto"></div>
+<button class="btn b2" onclick="back()">↩ Retour</button></div>
+<div id="ns" class="card hidden"><h2>Nouveau site</h2>
+<input id="nsn" placeholder="Nom"><button class="btn bs" onclick="mkSite2()">Créer</button>
+<button class="btn b2" onclick="back()">↩</button></div>
+<div id="ch" class="card hidden"><h2 style="margin-top:0">Fiche</h2><div id="ed"></div>
+<div id="uf" class="hidden"><input id="us" readonly><input id="uep" placeholder="Emplacement"><input id="ut" placeholder="Type">
+<button class="btn bi" onclick="addUnk()">➕ Ajouter</button></div>
+<button class="btn bs" onclick="saveC('CONFORME')">✅ CONFORME</button>
+<button class="btn bd" onclick="show('df')">⚠️ NON CONFORME</button>
+<button class="btn b2" onclick="back()">↩</button></div>
+<div id="df" class="card hidden"><h2>Défauts</h2><div class="cg">
+<label class="cl"><input type="checkbox" name="d" value="Plomb manquant"> Plombage</label>
+<label class="cl"><input type="checkbox" name="d" value="Goupille manquante"> Goupille</label>
+<label class="cl"><input type="checkbox" name="d" value="Manomètre hors zone"> Manomètre</label>
+<label class="cl"><input type="checkbox" name="d" value="Flexible abîmé"> Flexible</label>
+<label class="cl"><input type="checkbox" name="d" value="Corrosion"> Corrosion</label>
+<label class="cl"><input type="checkbox" name="d" value="Autre"> Autre</label></div>
+<textarea id="dn" placeholder="Note"></textarea>
+<button class="btn bd" onclick="saveC('NON CONFORME')">💾 Enregistrer</button>
+<button class="btn b2" onclick="back()">↩</button></div>
+<div id="sg" class="card hidden"><h2>Validation PDF</h2>
+<input id="sgn" placeholder="Nom technicien">
+<label class="cl"><input type="checkbox" id="sgc"> Je certifie les contrôles</label>
+<button class="btn bp" onclick="doPdf()">📄 Générer</button>
+<button class="btn b2" onclick="back()">Annuler</button></div>
+<script type="module" src="js/app.js"></script>
+</body></html>

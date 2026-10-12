@@ -64,20 +64,45 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}table.l{width:100%;bor
 <button class="btn hidden" style="background:#6c3483" id="br" onclick="resetP()">🔄 Reset période</button>
 <button class="btn bd hidden" id="bda" onclick="delAll()">🗑️ Supprimer liste</button></div>
 <div class="ft">Application créée par Svarodina & CO</div></div>
-<div id="ad" class="card hidden"><h2 style="margin-top:0">⚙️ Administration</h2>
-<p style="font-size:13px">Compte : <b id="ae"></b></p>
-<div class="as"><h3>Entreprises</h3><div id="ae2"></div>
-<input id="en" placeholder="Nom (ex: CFF)"><input id="es" placeholder="Slug (ex: cff)">
-<button class="btn bs" onclick="mkEnt()">Créer entreprise</button></div>
-<div class="as"><h3>Sites</h3><select id="se"></select><input id="sn" placeholder="Nom site">
-<button class="btn bs" onclick="mkSite()">Créer site</button></div>
-<div class="as"><h3>Utilisateurs</h3><div id="au" style="max-height:160px;overflow:auto;margin-bottom:8px"></div>
-<input id="ue2" type="email" placeholder="email@sbb.ch"><input id="up" placeholder="mot de passe (min 6)">
+<div id="ad" class="card hidden">
+<div class="hl"><div class="lc">SVARODINA<span>& CO</span></div><div class="sub">Administration</div></div>
+<p style="font-size:13px;text-align:center">Compte : <b id="ae"></b></p>
+<div class="as">
+<h3>1. Nouvelle entreprise</h3>
+<label>Nom de l'entreprise</label>
+<input id="en" placeholder="Ex: CFF, Migros…">
+<label>Nom du premier site</label>
+<input id="esn" placeholder="Ex: GEAP, Nyon…">
+<button class="btn bs" onclick="mkEnt()">Créer l'entreprise + site</button>
+</div>
+<div class="as">
+<h3>2. Entreprises & sites</h3>
+<div id="ae2"></div>
+<label>Ajouter un site à</label>
+<select id="se"></select>
+<input id="sn" placeholder="Nom du nouveau site">
+<button class="btn bs" onclick="mkSite()">Ajouter le site</button>
+</div>
+<div class="as">
+<h3>3. Utilisateurs par entreprise</h3>
+<label>Choisir l'entreprise</label>
+<select id="ue3" onchange="loadUsersForEnt()"></select>
+<div id="au" style="max-height:220px;overflow:auto;margin:10px 0"></div>
+<hr>
+<p style="font-size:13px;font-weight:600;margin:0 0 6px">Créer un utilisateur</p>
+<input id="ue2" type="email" placeholder="email@entreprise.ch">
+<input id="up" placeholder="Mot de passe temporaire (min 6)">
 <input id="un" placeholder="Nom affiché">
-<select id="urole"><option value="technicien">Technicien</option><option value="responsable">Responsable</option><option value="lecteur">Lecteur</option></select>
-<select id="ue3"></select><button class="btn bp" onclick="mkUser()">Créer utilisateur</button>
-<p style="font-size:11px;color:#888">Après création, reconnectez-vous en admin.</p></div>
-<button class="btn b2" onclick="back()">↩ Retour</button></div>
+<select id="urole">
+<option value="technicien">Technicien</option>
+<option value="responsable">Responsable de site</option>
+</select>
+<button class="btn bp" onclick="mkUser()">Créer l'utilisateur</button>
+<p style="font-size:11px;color:#888">Après création d'un utilisateur, reconnectez-vous avec le compte admin.</p>
+</div>
+<button class="btn b2" onclick="back()">↩ Retour</button>
+<div class="ft">Application créée par Svarodina & CO</div>
+</div>
 <div id="ls" class="card hidden"><h2 style="margin-top:0">Liste</h2>
 <input type="search" id="lq" placeholder="Recherche…" oninput="filt()">
 <div class="fb"><button class="on" data-f="all" onclick="setF('all')">Tous</button><button data-f="todo" onclick="setF('todo')">À faire</button><button data-f="done" onclick="setF('done')">OK</button></div>
